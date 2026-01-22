@@ -36,10 +36,28 @@ export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
   app.patch('/api/stats', async (c) => {
     const updates = await c.req.json<Partial<UserStats>>();
     const entity = new StatsEntity(c.env, 'me');
-    const stats = await entity.mutate(s => ({ ...s, ...updates }));
+    // Atomic incremental updates
+    const stats = await entity.mutate(s => ({
+      ...s,
+      ...updates,
+      xp: updates.xp !== undefined ? updates.xp : s.xp,
+      level: updates.level !== undefined ? updates.level : s.level,
+      coins: updates.coins !== undefined ? updates.coins : s.coins,
+      settings: updates.settings ? { ...s.settings, ...updates.settings } : s.settings
+    }));
     return ok(c, stats);
   });
-  // Academic Search with platform and OA filtering
+  app.get('/api/leaderboard', async (c) => {
+    // In a real app, this would use a global XP index.
+    // For now, we simulate with mock data.
+    return ok(c, [
+      { id: 's1', name: "太池居士", level: 42, xp: 45000 },
+      { id: 's2', name: "云端学圣", level: 38, xp: 39500 },
+      { id: 's3', name: "笔灵墨客", level: 35, xp: 36000 },
+      { id: 's4', name: "清风道友", level: 29, xp: 30000 },
+      { id: 's5', name: "烈火奇才", level: 25, xp: 26000 }
+    ]);
+  });
   app.get('/api/papers/search', async (c) => {
     const query = c.req.query('q')?.toLowerCase() || '';
     const source = c.req.query('source') || 'All';
@@ -63,7 +81,7 @@ export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
   });
   app.get('/api/community', async (c) => {
     return ok(c, [
-      { id: 'p1', userName: '学术��圣', content: '研习了 Transformer！', likes: 24, comments: 5, createdAt: new Date().toISOString(), category: 'dynamics', tags: ['学术'] }
+      { id: 'p1', userName: '学术大��', content: '研习了 Transformer！', likes: 24, comments: 5, createdAt: new Date().toISOString(), category: 'dynamics', tags: ['学术'] }
     ]);
   });
   app.post('/api/community', async (c) => {

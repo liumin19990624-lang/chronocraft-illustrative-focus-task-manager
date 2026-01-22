@@ -3,7 +3,7 @@ import { Task, TimerState, TimerMode, UserStats, SocialPost, UserSettings, AiAss
 import { api } from '@/lib/api-client';
 import { isYesterday, isToday, parseISO } from 'date-fns';
 import { toast } from 'sonner';
-import { MOCK_AI_RESPONSES } from '@/lib/mock-academic';
+import { MOCK_AI_RESPONSES, ACHIEVEMENT_LIST } from '@/lib/mock-academic';
 interface AppStore {
   tasks: Task[];
   socialPosts: SocialPost[];
@@ -32,6 +32,8 @@ interface AppStore {
   setDistracted: (distracted: boolean) => void;
   awardRewards: (xp: number, coins: number) => void;
   requestAiAssistant: (text: string, type: AiTaskType) => Promise<AiAssistantResult>;
+  completePomodoro: () => Promise<void>;
+  checkAchievements: () => void;
 }
 const POMODORO_TIME = 25 * 60;
 const DEFAULT_SETTINGS: UserSettings = { fontScale: 1.0, themePreference: 'system', privacyMode: false, notificationsEnabled: true, accentColor: '#88C0D0' };
@@ -61,17 +63,20 @@ export const useAppStore = create<AppStore>((set, get) => ({
     } catch (e) { set({ error: "Failed to load tasks", isLoading: false }); }
   },
   fetchStats: async () => {
-    const localUser = localStorage.getItem('xian_user');
-    if (localUser) {
-      try {
-        const parsed = JSON.parse(localUser);
-        set({ userStats: parsed });
-        const remote = await api<UserStats>(`/api/stats?userId=${parsed.id}`);
-        set({ userStats: remote });
-        localStorage.setItem('xian_user', JSON.stringify(remote));
-      } catch (e) { 
-        console.warn("[CONSOLE] Local state active, sync deferred", e); 
-      }
+    const localUserStr = localStorage.getItem('xian_user');
+    let localStats: UserStats | null = null;
+    if (localUserStr) {
+      try { localStats = JSON.parse(localUserStr); } catch (e) { console.error(e); }
+    }
+    try {
+      const remote = await api<UserStats>(`/api/stats?userId=${localStats?.id || 'me'}`);
+      // Deep merge logic to prevent data loss
+      const merged = { ...localStats, ...remote, settings: { ...localStats?.settings, ...remote.settings } };
+      set({ userStats: merged });
+      localStorage.setItem('xian_user', JSON.stringify(merged));
+    } catch (e) {
+      if (localStats) set({ userStats: localStats });
+      console.warn("[CONSOLE] Local state active, sync deferred", e);
     }
     set({ isLoading: false });
   },
@@ -112,7 +117,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const updated = { ...stats, xp: newXP, level: newLevel, coins: stats.coins + coinGain };
     set({ userStats: updated });
     localStorage.setItem('xian_user', JSON.stringify(updated));
-    api('/api/stats', { method: 'PATCH', body: JSON.stringify(updated) });
+    api('/api/stats', { method: 'PATCH', body: JSON.stringify({ xp: updated.xp, level: updated.level, coins: updated.coins }) });
+    get().checkAchievements();
   },
   addTask: async (taskData) => {
     const user = get().userStats;
@@ -133,11 +139,49 @@ export const useAppStore = create<AppStore>((set, get) => ({
     if (!task || task.status === 2) return;
     get().updateTask(id, { status: 2, completedAt: new Date().toISOString() });
     get().awardRewards(150, 50);
+    set(s => ({ userStats: s.userStats ? { ...s.userStats, totalTasksCompleted: s.userStats.totalTasksCompleted + 1 } : null }));
+  },
+  completePomodoro: async () => {
+    const { timer, tasks, userStats } = get();
+    if (!timer.activeTaskId) return;
+    const task = tasks.find(t => t.id === timer.activeTaskId);
+    if (task) {
+      const newSpent = task.pomodoroSpent + 1;
+      await get().updateTask(task.id, { pomodoroSpent: newSpent });
+      // Calculate reward based on spirit/quality (mocked 100 here for simplicity)
+      const xpReward = 100;
+      const coinReward = 20;
+      await get().awardRewards(xpReward, coinReward);
+      if (userStats) {
+        const updatedStats = { ...userStats, totalFocusMinutes: userStats.totalFocusMinutes + 25 };
+        set({ userStats: updatedStats });
+        localStorage.setItem('xian_user', JSON.stringify(updatedStats));
+      }
+    }
+    get().stopFocus();
+  },
+  checkAchievements: () => {
+    const { userStats, tasks } = get();
+    if (!userStats) return;
+    const currentUnlocked = userStats.unlockedAchievements;
+    const newUnlocks: string[] = [];
+    // Simple logic checks
+    if (userStats.level >= 5 && !currentUnlocked.includes('a2')) newUnlocks.push('a2');
+    if (userStats.totalTasksCompleted >= 10 && !currentUnlocked.includes('a3')) newUnlocks.push('a3');
+    if (newUnlocks.length > 0) {
+      const updated = { ...userStats, unlockedAchievements: [...currentUnlocked, ...newUnlocks] };
+      set({ userStats: updated });
+      localStorage.setItem('xian_user', JSON.stringify(updated));
+      newUnlocks.forEach(id => {
+        const ach = ACHIEVEMENT_LIST.find(a => a.id === id);
+        if (ach) toast.success(`��就解锁: ${ach.name}`, { description: ach.description });
+      });
+    }
   },
   requestAiAssistant: async (text, type) => {
     return new Promise((resolve) => {
       setTimeout(() => {
-        const responseContent = MOCK_AI_RESPONSES[type] || "笔灵由于��力不支，未能给出回应。";
+        const responseContent = MOCK_AI_RESPONSES[type] || "笔��由于法力不支，未能给出回应。";
         const result: AiAssistantResult = {
           taskId: crypto.randomUUID(),
           type,
@@ -145,7 +189,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
           originalText: text,
           metadata: type === 'evaluate' ? {
             score: { grammar: 92, logic: 95, originality: 98 },
-            suggestions: ["逻辑严密", "��创度高"]
+            suggestions: ["逻辑严密", "原创度高"]
           } : undefined
         };
         resolve(result);

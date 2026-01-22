@@ -3,15 +3,15 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { Toaster } from '@/components/ui/sonner';
 import { TaskCard } from '@/components/task/TaskCard';
 import { CalendarWidget } from '@/components/dashboard/CalendarWidget';
-import { FocusOverlay } from '@/components/focus/FocusOverlay';
 import { useAppStore } from '@/store/use-app-store';
-import { Sparkles, Plus, Trophy, Flame, Inbox, Wallet, Book, Headphones, FileText, PenTool, Brain, ChevronRight, Bell, User } from 'lucide-react';
+import { Sparkles, Plus, Trophy, Flame, Inbox, Wallet, Book, Headphones, FileText, PenTool, Bell, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { NewTaskDialog } from '@/components/task/NewTaskDialog';
 import { RegisterDialog } from '@/components/registration/RegisterDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useShallow } from 'zustand/react/shallow';
@@ -72,7 +72,6 @@ export function HomePage() {
   const isLoading = useAppStore(s => s.isLoading);
   const fetchTasks = useAppStore(s => s.fetchTasks);
   const fetchStats = useAppStore(s => s.fetchStats);
-  const activeTaskId = useAppStore(s => s.timer.activeTaskId);
   const showArchived = useAppStore(s => s.showArchived);
   const toggleShowArchived = useAppStore(s => s.toggleShowArchived);
   const userStats = useAppStore(s => s.userStats);
@@ -80,6 +79,7 @@ export function HomePage() {
   const userLevel = userStats?.level ?? 1;
   const userCoins = userStats?.coins ?? 0;
   const userStreak = userStats?.streak ?? 0;
+  const userXP = userStats?.xp ?? 0;
   const hasUser = !!userNickname;
   useEffect(() => {
     fetchStats().then(() => { if (userNickname) fetchTasks(); });
@@ -90,8 +90,8 @@ export function HomePage() {
     const randomQuote = ACADEMIC_QUOTES[Math.floor(Math.random() * ACADEMIC_QUOTES.length)];
     if (hour >= 12 && hour < 18) timeGreet = "午后小憩";
     if (hour >= 18) timeGreet = "月下研读";
-    return `${timeGreet}，${userNickname}道友。今日你已处在第 ${userLevel} 重境界，���识清明，宜修法。${randomQuote}`;
-  }, [userNickname, userLevel]);
+    return `${timeGreet}，${userNickname}道友。${randomQuote}`;
+  }, [userNickname]);
   const sortedTasks = useMemo(() => {
     let filtered = tasks;
     if (!showArchived) filtered = tasks.filter(t => !t.isArchived);
@@ -102,9 +102,9 @@ export function HomePage() {
     });
   }, [tasks, showArchived]);
   const quickAccess = [
-    { name: "词汇 对战", icon: Book, color: "bg-orange-500", path: "/vocab", desc: "对战���忆术" },
+    { name: "词汇 对战", icon: Book, color: "bg-orange-500", path: "/vocab", desc: "对战记忆术" },
     { name: "听力 研习", icon: Headphones, color: "bg-blue-500", path: "/listening", desc: "精听悟道方" },
-    { name: "论文 阅读", icon: FileText, color: "bg-emerald-500", path: "/papers", desc: "双���研习社" },
+    { name: "论文 阅读", icon: FileText, color: "bg-emerald-500", path: "/papers", desc: "双栏研习社" },
     { name: "写作 创作", icon: PenTool, color: "bg-purple-500", path: "/writer", desc: "灵感演武场" },
   ];
   if (!hasUser) return <RegisterDialog />;
@@ -114,18 +114,24 @@ export function HomePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="py-8 md:py-10 lg:py-12">
           <ThemeToggle className="fixed top-4 right-4" />
-          <FocusOverlay />
           <PWAPrompt />
-          <div className={cn("transition-all duration-700 space-y-12", activeTaskId && "blur-xl opacity-40 pointer-events-none")}>
+          <div className="space-y-12">
             <header className="flex flex-col md:flex-row md:items-start justify-between gap-8">
               <div className="flex items-center gap-6">
-                <Avatar className="h-20 w-20 rounded-3xl shadow-2xl ring-4 ring-primary/5">
+                <Avatar className="h-24 w-24 rounded-3xl shadow-2xl ring-4 ring-primary/5">
                   <AvatarImage src={userStats?.avatar} />
                   <AvatarFallback className="bg-primary text-primary-foreground"><User /></AvatarFallback>
                 </Avatar>
-                <div>
+                <div className="space-y-3">
                   <h1 className="text-4xl font-display font-bold tracking-tight">学术大厅</h1>
-                  <p className="text-muted-foreground font-medium text-lg mt-1">{dailyGreeting}</p>
+                  <p className="text-muted-foreground font-medium text-lg">{dailyGreeting}</p>
+                  <div className="w-full max-w-xs space-y-1.5">
+                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
+                      <span>第 {userLevel} 重境界</span>
+                      <span>{userXP % 1000} / 1000 XP</span>
+                    </div>
+                    <Progress value={(userXP % 1000) / 10} className="h-1.5" />
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-4 bg-card/40 backdrop-blur-xl p-2 rounded-[2.5rem] border border-border/50 shadow-soft">
@@ -167,9 +173,9 @@ export function HomePage() {
               <section className="lg:col-span-8 space-y-10">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <h2 className="text-3xl font-display font-bold">待办任务 (Quests)</h2>
+                    <h2 className="text-3xl font-display font-bold">待办��务 (Quests)</h2>
                     <Button variant="ghost" size="sm" onClick={toggleShowArchived} className="rounded-xl text-xs font-bold uppercase tracking-widest">
-                      {showArchived ? "隐藏" : "查看归档"}
+                      {showArchived ? "隐��" : "查看归档"}
                     </Button>
                   </div>
                   <NewTaskDialog>

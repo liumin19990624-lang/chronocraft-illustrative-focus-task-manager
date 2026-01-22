@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/store/use-app-store';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, X, CheckCircle2, Ghost, Sparkles, Brain, Waves, CloudRain, Library, HeartPulse } from 'lucide-react';
+import { Play, Pause, X, CheckCircle2, Ghost, HeartPulse, Waves, CloudRain, Library } from 'lucide-react';
 import { triggerConfetti } from '@/components/ui/confetti';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -16,12 +16,13 @@ export function FocusOverlay() {
   const isPaused = useAppStore(s => s.timer.isPaused);
   const isDistracted = useAppStore(s => s.timer.isDistracted);
   const timeLeft = useAppStore(s => s.timer.timeLeft);
+  const mode = useAppStore(s => s.timer.mode);
   const tasks = useAppStore(useShallow(s => s.tasks));
   const tick = useAppStore(s => s.tick);
   const toggleTimer = useAppStore(s => s.toggleTimer);
   const stopFocus = useAppStore(s => s.stopFocus);
   const setDistracted = useAppStore(s => s.setDistracted);
-  const completeTask = useAppStore(s => s.completeTask);
+  const completePomodoro = useAppStore(s => s.completePomodoro);
   const userStats = useAppStore(s => s.userStats);
   const [spiritHealth, setSpiritHealth] = useState(100);
   const hiddenTimeRef = useRef<number | null>(null);
@@ -32,51 +33,57 @@ export function FocusOverlay() {
         hiddenTimeRef.current = Date.now();
       } else if (hiddenTimeRef.current) {
         const diff = (Date.now() - hiddenTimeRef.current) / 1000;
-        if (diff > 15 && isRunning) {
+        if (diff > 15 && isRunning && mode === 'focus') {
           setDistracted(true);
           setSpiritHealth(prev => Math.max(0, prev - 25));
           playSound('click');
-          toast.warning("道心不稳！", { description: "离开过久，损耗了 25% 的专注元气。" });
+          toast.warning("道心不���！", { description: "离开过久，损耗了 25% 的专注元气。" });
         }
         hiddenTimeRef.current = null;
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [isRunning, setDistracted]);
+  }, [isRunning, mode, setDistracted]);
+  // Tick & Recovery Logic
   useEffect(() => {
     let interval: any;
     if (isRunning && activeTaskId) {
-      interval = setInterval(() => tick(), 1000);
+      interval = setInterval(() => {
+        tick();
+        if (mode !== 'focus') {
+          setSpiritHealth(prev => Math.min(100, prev + 0.5));
+        }
+      }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isRunning, activeTaskId, tick]);
+  }, [isRunning, activeTaskId, tick, mode]);
   useEffect(() => {
     if (timeLeft === 0 && activeTaskId && isRunning) {
       playSound('ding');
-      toast.success("潜修圆满！", { description: "周天运行完毕，神识获得洗礼。" });
       triggerConfetti();
-      stopFocus();
+      completePomodoro();
+      toast.success("潜修圆���！", { description: "周天运行完毕，神识获得洗礼。" });
     }
-  }, [timeLeft, activeTaskId, isRunning, stopFocus]);
+  }, [timeLeft, activeTaskId, isRunning, completePomodoro]);
   if (!activeTaskId) return null;
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
+  const glowColor = spiritHealth > 60 ? "shadow-primary/20" : spiritHealth > 30 ? "shadow-amber-500/20" : "shadow-red-500/30";
   return (
     <AnimatePresence>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center p-10 overflow-hidden">
-        {/* Background Animation */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <motion.div 
-            animate={{ 
-              scale: isRunning ? [1, 1.1, 1] : 1,
-              opacity: isRunning ? [0.1, 0.2, 0.1] : 0.05
-            }} 
+          <motion.div
+            animate={{
+              scale: isRunning ? [1, 1.05, 1] : 1,
+              opacity: isRunning ? [0.1, 0.15, 0.1] : 0.05
+            }}
             transition={{ duration: 10, repeat: Infinity }}
-            className="absolute inset-0 bg-gradient-radial from-primary/20 to-transparent blur-[120px]" 
+            className={cn("absolute inset-0 blur-[120px] bg-gradient-radial from-primary/20 to-transparent", 
+              spiritHealth < 30 && "from-red-500/10")}
           />
         </div>
-        {/* Top Bar: Health and Stats */}
         <div className="absolute top-10 left-0 right-0 px-10 flex items-center justify-between z-20">
           <div className="flex items-center gap-6 w-full max-w-sm">
             <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
@@ -85,7 +92,7 @@ export function FocusOverlay() {
             <div className="flex-1 space-y-1.5">
               <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 <span>专注元气 (Immersion)</span>
-                <span>{spiritHealth}%</span>
+                <span>{Math.floor(spiritHealth)}%</span>
               </div>
               <Progress value={spiritHealth} className="h-2 bg-secondary rounded-full" />
             </div>
@@ -93,15 +100,14 @@ export function FocusOverlay() {
           <div className="flex items-center gap-4">
             <div className="bg-secondary/50 px-6 py-2 rounded-2xl border border-border/50 backdrop-blur-md">
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">当前境界</p>
-              <p className="font-display font-bold text-sm">第 {userStats?.level || 1} ���天</p>
+              <p className="font-display font-bold text-sm">第 {userStats?.level || 1} 重境界</p>
             </div>
             <Button variant="ghost" size="icon" className="h-14 w-14 rounded-full bg-secondary/50" onClick={stopFocus}><X className="h-6 w-6" /></Button>
           </div>
         </div>
-        {/* Main Timer Area */}
         <div className="w-full max-w-5xl text-center space-y-12 z-10 relative">
           <div className="space-y-6">
-            <Badge className={cn("px-10 py-2.5 text-xs rounded-full font-bold uppercase tracking-[0.3em] shadow-xl", 
+            <Badge className={cn("px-10 py-2.5 text-xs rounded-full font-bold uppercase tracking-[0.3em] shadow-xl",
               isDistracted ? "bg-amber-500 animate-pulse" : isRunning ? "bg-primary" : "bg-muted text-muted-foreground")}>
               {isDistracted ? "道心入魔 · 已走神" : isRunning ? "深度潜修中" : "入定中"}
             </Badge>
@@ -110,12 +116,13 @@ export function FocusOverlay() {
             </h2>
           </div>
           <div className="relative group">
-            <motion.div 
-              key={timeLeft} 
-              initial={{ scale: 0.95, opacity: 0.8 }} 
-              animate={{ scale: 1, opacity: 1 }} 
-              className={cn("text-[22rem] md:text-[28rem] font-bold tabular-nums tracking-tighter leading-none transition-all duration-700 select-none", 
-                isRunning ? "text-foreground drop-shadow-2xl" : "text-muted-foreground/10")}
+            <motion.div
+              key={timeLeft}
+              initial={{ scale: 0.98, opacity: 0.9 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={cn("text-[20rem] md:text-[25rem] font-bold tabular-nums tracking-tighter leading-none transition-all duration-700 select-none",
+                isRunning ? "text-foreground drop-shadow-2xl" : "text-muted-foreground/10",
+                glowColor)}
             >
               {minutes}<span className="text-primary/20 animate-pulse">:</span>{seconds.toString().padStart(2, '0')}
             </motion.div>
@@ -125,7 +132,7 @@ export function FocusOverlay() {
                   <Ghost className="h-24 w-24 text-amber-500 mx-auto animate-float" />
                   <div className="space-y-2">
                     <p className="text-4xl font-display font-bold">杂念丛生</p>
-                    <p className="text-muted-foreground font-medium">道心出现��缝，请速速归位。</p>
+                    <p className="text-muted-foreground font-medium">道心出现裂缝���请速速归位。</p>
                   </div>
                   <Button size="lg" className="rounded-3xl h-16 px-16 text-xl font-bold bg-amber-500 hover:bg-amber-600" onClick={() => setDistracted(false)}>重拾道心</Button>
                 </div>
@@ -136,12 +143,11 @@ export function FocusOverlay() {
             <Button size="lg" variant="outline" className="h-28 w-28 rounded-[2.5rem] border-4 shadow-2xl hover:scale-110 transition-all bg-background/50 backdrop-blur-md" onClick={toggleTimer}>
               {isRunning ? <Pause className="h-12 w-12" /> : <Play className="h-12 w-12 ml-2 fill-current" />}
             </Button>
-            <Button size="lg" className="h-28 px-16 rounded-[2.5rem] text-3xl font-bold gap-6 shadow-[0_20px_40px_rgba(0,0,0,0.2)] hover:translate-y-[-4px] transition-all" onClick={() => completeTask(activeTaskId)}>
+            <Button size="lg" className="h-28 px-16 rounded-[2.5rem] text-3xl font-bold gap-6 shadow-[0_20px_40px_rgba(0,0,0,0.2)] hover:translate-y-[-4px] transition-all" onClick={completePomodoro}>
               <CheckCircle2 className="h-12 w-12" /> 终证大道
             </Button>
           </div>
         </div>
-        {/* Bottom Tools: Ambient Noise */}
         <div className="absolute bottom-12 flex flex-col items-center gap-6">
           <div className="flex items-center gap-3 bg-secondary/30 p-2 rounded-[2rem] border border-border/30 backdrop-blur-xl">
             <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl hover:bg-background"><Waves className="h-5 w-5" /></Button>
@@ -151,7 +157,7 @@ export function FocusOverlay() {
             <span className="px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">沉浸环境音</span>
           </div>
           <motion.div animate={{ opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 5, repeat: Infinity }} className="text-muted-foreground italic text-xl font-display max-w-2xl mx-auto text-center">
-            “静以修身，俭以养德。非淡泊无以明志，非宁静无以致远。”
+            “静以修身���俭以养德。非淡泊无以明志，非宁静无以致远。��
           </motion.div>
         </div>
       </motion.div>
