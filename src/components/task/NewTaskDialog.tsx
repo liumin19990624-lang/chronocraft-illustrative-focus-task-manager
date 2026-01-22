@@ -28,13 +28,14 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Priority } from '@shared/types';
 const taskSchema = z.object({
   title: z.string().min(2, '标题太短了'),
   priority: z.number().min(1).max(4),
   type: z.enum(['reading', 'listening', 'writing', 'other'] as const),
   dueDate: z.date(),
-  dueTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, '���间格式错误 (HH:mm)'),
-  pomodoroEstimate: z.number().int().min(1, '至少需要1个番��'),
+  dueTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, '��间格式错误 (HH:mm)'),
+  pomodoroEstimate: z.number().int().min(1, '至少需要1个番茄'),
 });
 type TaskFormData = z.infer<typeof taskSchema>;
 export function NewTaskDialog({ children }: { children: React.ReactNode }) {
@@ -61,6 +62,7 @@ export function NewTaskDialog({ children }: { children: React.ReactNode }) {
     try {
       await addTask({
         ...data,
+        priority: data.priority as Priority,
         dueDate: data.dueDate.toISOString(),
       });
       toast.success(`任务 "${data.title}" 已成功添加到卡组`);
@@ -77,7 +79,7 @@ export function NewTaskDialog({ children }: { children: React.ReactNode }) {
         <DialogHeader>
           <DialogTitle className="text-2xl font-display font-bold">构思新蓝图</DialogTitle>
           <DialogDescription className="text-base font-medium text-muted-foreground/80">
-            规划你的下���个创造性任务，设置优先级与预估时长。
+            规划你的下一个创造性任务，设置优先级与预���时长。
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 py-4">
@@ -100,7 +102,7 @@ export function NewTaskDialog({ children }: { children: React.ReactNode }) {
                     <SelectContent className="rounded-xl">
                       <SelectItem value="reading">论文/书籍阅读</SelectItem>
                       <SelectItem value="listening">听力/播客练习</SelectItem>
-                      <SelectItem value="writing">内容/代码创作</SelectItem>
+                      <SelectItem value="writing">内容/代码��作</SelectItem>
                       <SelectItem value="other">其他</SelectItem>
                     </SelectContent>
                   </Select>
@@ -121,7 +123,7 @@ export function NewTaskDialog({ children }: { children: React.ReactNode }) {
                       <SelectItem value="1">P1 - 紧急</SelectItem>
                       <SelectItem value="2">P2 - 重要</SelectItem>
                       <SelectItem value="3">P3 - 普通</SelectItem>
-                      <SelectItem value="4">P4 - 随��</SelectItem>
+                      <SelectItem value="4">P4 - 随意</SelectItem>
                     </SelectContent>
                   </Select>
                 )}

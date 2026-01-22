@@ -9,15 +9,16 @@ import { Sparkles, Plus, Trophy, Flame, Inbox, BarChart3, Archive } from 'lucide
 import { Button } from '@/components/ui/button';
 import { NewTaskDialog } from '@/components/task/NewTaskDialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 export function HomePage() {
   const tasks = useAppStore(s => s.tasks);
   const isLoading = useAppStore(s => s.isLoading);
   const fetchTasks = useAppStore(s => s.fetchTasks);
-  const activeTaskId = useAppStore(s => s.timer.activeTaskId);
+  const timer = useAppStore(s => s.timer);
   const showArchived = useAppStore(s => s.showArchived);
   const toggleShowArchived = useAppStore(s => s.toggleShowArchived);
+  const activeTaskId = timer.activeTaskId;
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
@@ -27,13 +28,10 @@ export function HomePage() {
       filtered = tasks.filter(t => !t.isArchived);
     }
     return [...filtered].sort((a, b) => {
-      // 1. Incomplete first
       const aDone = a.status === 'completed';
       const bDone = b.status === 'completed';
       if (aDone !== bDone) return aDone ? 1 : -1;
-      // 2. Priority 1-4
       if (a.priority !== b.priority) return a.priority - b.priority;
-      // 3. Due Date
       return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
     });
   }, [tasks, showArchived]);
@@ -63,7 +61,7 @@ export function HomePage() {
                   <div>
                     <h1 className="text-5xl font-display font-bold tracking-tight">ChronoCraft</h1>
                     <p className="text-muted-foreground font-medium text-lg mt-1">
-                      早安，建筑师。今日尚有 <span className="text-foreground font-bold underline decoration-primary/40 underline-offset-4">{incompleteCount}</span> 个任务蓝图。
+                      早安，建筑师。今日尚��� <span className="text-foreground font-bold underline decoration-primary/40 underline-offset-4">{incompleteCount}</span> 个任务蓝图。
                     </p>
                   </div>
                 </div>
@@ -91,7 +89,7 @@ export function HomePage() {
                   <div className="space-y-4 flex-1">
                     <div className="flex items-center gap-2">
                       <BarChart3 className="h-5 w-5 text-primary" />
-                      <h3 className="font-display font-bold text-xl">今日进度看板</h3>
+                      <h3 className="font-display font-bold text-xl">今日进度���板</h3>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm font-bold">
@@ -111,11 +109,11 @@ export function HomePage() {
                 <div className="flex items-center justify-between px-2">
                   <div className="flex items-center gap-4">
                     <h2 className="text-3xl font-display font-bold">任务卡组</h2>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={toggleShowArchived}
-                      className={cn("rounded-xl gap-2 text-xs font-bold uppercase tracking-widest", showArchived && "bg-secondary")}
+                      className={cn("rounded-xl gap-2 text-xs font-bold uppercase tracking-widest", showArchived && "bg-accent text-accent-foreground shadow-sm")}
                     >
                       <Archive className="h-4 w-4" />
                       {showArchived ? "隐藏已归档" : "查看归档"}
@@ -123,7 +121,7 @@ export function HomePage() {
                   </div>
                   <NewTaskDialog>
                     <Button className="rounded-2xl gap-3 px-8 h-14 text-lg font-bold shadow-2xl shadow-primary/20 hover:scale-105 transition-all">
-                      <Plus className="h-5 w-5" /> 开启新蓝图
+                      <Plus className="h-5 w-5" /> 开启���蓝图
                     </Button>
                   </NewTaskDialog>
                 </div>
@@ -134,7 +132,7 @@ export function HomePage() {
                     <div className="flex flex-col items-center justify-center py-24 bg-secondary/10 rounded-[3rem] border-4 border-dashed border-muted-foreground/5 text-center">
                       <Inbox className="h-20 w-20 text-muted-foreground/20 mb-6" />
                       <p className="text-2xl font-display font-bold text-muted-foreground">空空如也</p>
-                      <p className="text-muted-foreground/60 mt-2 font-medium">暂无符合条件的任务，享受这一刻的宁静</p>
+                      <p className="text-muted-foreground/60 mt-2 font-medium">暂无��合条件的任务，享受这一刻的宁静</p>
                     </div>
                   ) : (
                     sortedTasks.map(task => (
@@ -148,14 +146,14 @@ export function HomePage() {
                 <div className="p-10 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 rounded-[3rem] text-white space-y-6 shadow-2xl shadow-indigo-500/30 relative overflow-hidden group">
                   <div className="absolute top-0 right-0 -mr-16 -mt-16 w-56 h-56 bg-white/10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-1000" />
                   <div className="space-y-2 relative z-10">
-                    <Badge className="bg-white/20 hover:bg-white/30 border-none text-white font-bold rounded-lg px-3 py-1">工匠贴士</Badge>
-                    <h3 className="text-3xl font-display font-bold">深度构筑���南</h3>
+                    <div className="bg-white/20 inline-flex items-center border-none text-white font-bold rounded-lg px-3 py-1 text-xs uppercase tracking-wider">工匠贴士</div>
+                    <h3 className="text-3xl font-display font-bold">深度构筑指南</h3>
                   </div>
                   <p className="text-indigo-50/90 leading-relaxed font-medium text-lg italic">
-                    "专注时段是��的神圣画布。不要让琐碎的通知惊扰了正在成型的杰作。每一次深呼吸都是一次构筑。"
+                    "专注时段是你的神圣画布。��要让琐碎的通知惊扰了正在成型的杰作。每一次深呼吸都是一次构筑。"
                   </p>
                   <Button variant="secondary" className="w-full bg-white text-indigo-600 hover:bg-indigo-50 font-bold rounded-2xl h-14 text-lg border-none shadow-xl">
-                    阅读��整指南
+                    阅读完��指南
                   </Button>
                 </div>
               </aside>

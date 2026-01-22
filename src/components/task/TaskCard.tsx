@@ -9,9 +9,10 @@ import { formatDistanceToNow, parseISO, isPast, differenceInHours } from 'date-f
 import { zhCN } from 'date-fns/locale';
 import { triggerTaskCompletionConfetti } from '@/components/ui/confetti';
 import { useAppStore } from '@/store/use-app-store';
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useTransform } from 'framer-motion';
 import { toast } from 'sonner';
 import { playSound } from '@/lib/audio';
+import { useSwipeable } from 'react-swipeable';
 interface TaskCardProps {
   task: Task;
 }
@@ -25,7 +26,7 @@ const statusLabels: Record<string, string> = {
   'todo': '未开始',
   'in-progress': '进行中',
   'completed': '已完成',
-  'archived': '已归档'
+  'archived': '已���档'
 };
 const typeIcons: Record<TaskType, React.ReactNode> = {
   reading: <BookOpen className="h-4 w-4" />,
@@ -37,31 +38,47 @@ export function TaskCard({ task }: TaskCardProps) {
   const completeTask = useAppStore(s => s.completeTask);
   const startFocus = useAppStore(s => s.startFocus);
   const updateTask = useAppStore(s => s.updateTask);
-  const activeTaskId = useAppStore(s => s.timer.activeTaskId);
+  const timer = useAppStore(s => s.timer);
+  const activeTaskId = timer.activeTaskId;
   const isCompleted = task.status === 'completed';
   const isArchived = task.isArchived;
   const isActive = activeTaskId === task.id;
   const dueDateTime = parseISO(task.dueDate);
   const isOverdue = !isCompleted && isPast(dueDateTime) && Math.abs(differenceInHours(new Date(), dueDateTime)) > 0;
-  const handleComplete = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleComplete = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (isCompleted) return;
     playSound('success');
     if (window.navigator.vibrate) window.navigator.vibrate(100);
-    triggerTaskCompletionConfetti(e.clientX, e.clientY);
+    const x = e ? e.clientX : window.innerWidth / 2;
+    const y = e ? e.clientY : window.innerHeight / 2;
+    triggerTaskCompletionConfetti(x, y);
     completeTask(task.id);
     toast.success(`构筑完成: "${task.title}"`, {
       description: "获得 +10 经验值",
     });
   };
-  const toggleArchive = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const toggleArchive = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     const newArchived = !isArchived;
-    updateTask(task.id, { 
-      isArchived: newArchived, 
-      status: newArchived ? 'archived' : (isCompleted ? 'completed' : 'todo') 
+    updateTask(task.id, {
+      isArchived: newArchived,
+      status: newArchived ? 'archived' : (isCompleted ? 'completed' : 'todo')
     });
-    toast.info(newArchived ? "蓝图已移至档案室" : "蓝图已重新激活");
+    toast.info(newArchived ? "蓝图已移至档��室" : "蓝图已重新激活");
   };
+  const swipeHandlers = useSwipeable({
+    onSwipedLeft: () => toggleArchive(),
+    onSwipedRight: () => !isCompleted && handleComplete(),
+    trackMouse: true,
+    delta: 50,
+  });
+  const x = useMotionValue(0);
+  const background = useTransform(
+    x,
+    [-100, 0, 100],
+    ["rgb(239 68 68 / 0.1)", "transparent", "rgb(34 197 94 / 0.1)"]
+  );
   const getDisplayTime = () => {
     if (isCompleted) return `完成于 ${task.completedAt ? formatDistanceToNow(parseISO(task.completedAt), { addSuffix: true, locale: zhCN }) : '近期'}`;
     const dist = formatDistanceToNow(dueDateTime, { addSuffix: true, locale: zhCN });
@@ -69,13 +86,15 @@ export function TaskCard({ task }: TaskCardProps) {
   };
   const progressPercent = Math.min(100, (task.pomodoroSpent / task.pomodoroEstimate) * 100);
   return (
-    <motion.div 
-      layout 
-      initial={{ opacity: 0, scale: 0.95 }} 
-      animate={{ opacity: 1, scale: 1 }} 
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.3 }}
       whileHover={{ y: -4 }}
+      style={{ background }}
+      {...swipeHandlers}
     >
       <Card className={cn(
         "group relative flex items-stretch p-0 gap-0 border-none rounded-[2rem] overflow-hidden transition-all duration-300 bg-card/50 backdrop-blur-md shadow-soft hover:shadow-xl",
@@ -123,7 +142,7 @@ export function TaskCard({ task }: TaskCardProps) {
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="h-3.5 w-3.5" />
-                <span>{task.pomodoroSpent} / {task.pomodoroEstimate} 番茄钟</span>
+                <span>{task.pomodoroSpent} / {task.pomodoroEstimate} 番茄���</span>
               </div>
             </div>
             <div className="h-2 w-full bg-secondary/60 rounded-full overflow-hidden">
@@ -147,7 +166,7 @@ export function TaskCard({ task }: TaskCardProps) {
             )}
             {!isArchived && (
               <button
-                onClick={handleComplete}
+                onClick={(e) => handleComplete(e)}
                 disabled={isCompleted}
                 className={cn(
                   "h-14 w-14 rounded-2xl border-2 flex items-center justify-center transition-all active:scale-90",
@@ -161,7 +180,7 @@ export function TaskCard({ task }: TaskCardProps) {
               variant="ghost"
               size="icon"
               className="rounded-2xl h-14 w-14 text-muted-foreground/40 hover:bg-secondary hover:text-foreground"
-              onClick={toggleArchive}
+              onClick={(e) => toggleArchive(e)}
             >
               {isArchived ? <RotateCcw className="h-6 w-6" /> : <Archive className="h-6 w-6" />}
             </Button>
