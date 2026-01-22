@@ -3,10 +3,10 @@ import { useAppStore } from '@/store/use-app-store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Radar, RadarChart, PolarGrid, PolarAngleAxis
+  Radar, RadarChart, PolarGrid, PolarAngleAxis
 } from 'recharts';
 import { Trophy, Flame, Clock, Target, Brain, Sparkles } from 'lucide-react';
-import { format, subDays, isSameDay } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useShallow } from 'zustand/react/shallow';
 import { DYNAMIC_INSIGHTS } from '@/lib/mock-academic';
@@ -18,7 +18,9 @@ export function StatsPage() {
   const xp = userStats?.xp ?? 0;
   const totalFocusMinutes = userStats?.totalFocusMinutes ?? 0;
   const totalTasksCompleted = userStats?.totalTasksCompleted ?? 0;
-  const focusHistory = userStats?.focusHistory ?? {};
+  // Stabilize the reference by pulling the primitive directly if needed,
+  // but here we just need to ensure the logical expression doesn't break memoization.
+  const focusHistory = userStats?.focusHistory;
   const statsSummary = useMemo(() => [
     { label: "连胜构筑", value: `${streak} 天`, icon: Flame, color: "text-orange-500", bg: "bg-orange-50" },
     { label: "总经验值", value: xp.toLocaleString(), icon: Trophy, color: "text-yellow-500", bg: "bg-yellow-50" },
@@ -26,12 +28,13 @@ export function StatsPage() {
     { label: "完成蓝图", value: totalTasksCompleted, icon: Target, color: "text-green-500", bg: "bg-green-50" },
   ], [streak, xp, totalFocusMinutes, totalTasksCompleted]);
   const chartData = useMemo(() => {
+    const history = focusHistory || {};
     return Array.from({ length: 7 }).map((_, i) => {
       const date = subDays(new Date(), 6 - i);
       const dateStr = format(date, 'yyyy-MM-dd');
       return {
         name: format(date, 'MM/dd'),
-        minutes: focusHistory[dateStr] || 0,
+        minutes: history[dateStr] || 0,
       };
     });
   }, [focusHistory]);
@@ -44,14 +47,15 @@ export function StatsPage() {
     });
     return [
       { subject: '阅读', A: counts.reading * 10, fullMark: 100 },
-      { subject: '听���', A: counts.listening * 10, fullMark: 100 },
+      { subject: '听力', A: counts.listening * 10, fullMark: 100 },
       { subject: '写作', A: counts.writing * 10, fullMark: 100 },
       { subject: '外务', A: counts.other * 10, fullMark: 100 },
     ];
   }, [tasks]);
   const dailyInsight = useMemo(() => {
+    const history = focusHistory || {};
     const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const todayFocus = focusHistory[todayStr] || 0;
+    const todayFocus = history[todayStr] || 0;
     if (todayFocus > 100) return DYNAMIC_INSIGHTS.high_focus;
     if (streak > 3) return DYNAMIC_INSIGHTS.streak_master;
     if (todayFocus < 25) return DYNAMIC_INSIGHTS.low_activity;
@@ -59,9 +63,9 @@ export function StatsPage() {
   }, [focusHistory, streak]);
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12">
-      <header className="mb-12">
+      <header className="mb-12 text-center md:text-left">
         <h1 className="text-5xl font-display font-bold tracking-tight text-foreground">时间视野</h1>
-        <p className="text-muted-foreground text-lg mt-2 font-medium">洞察你的构筑规律与成��轨迹</p>
+        <p className="text-muted-foreground text-lg mt-2 font-medium">洞察你的构筑规律与成就轨迹</p>
       </header>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
         {statsSummary.map((stat, i) => (
@@ -80,7 +84,7 @@ export function StatsPage() {
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
         <Card className="lg:col-span-8 border-none shadow-soft rounded-[3rem] p-8 bg-card/40 backdrop-blur-xl">
-          <CardHeader className="px-0 pt-0 pb-8"><CardTitle className="text-2xl font-display font-bold text-foreground">近七日专注趋�� (Immersion Trend)</CardTitle></CardHeader>
+          <CardHeader className="px-0 pt-0 pb-8"><CardTitle className="text-2xl font-display font-bold text-foreground">近七日专注趋势 (Immersion Trend)</CardTitle></CardHeader>
           <div className="h-[400px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
