@@ -6,7 +6,7 @@ import { FileText, Brain, Sparkles, Languages, Bookmark, ArrowLeft, Search as Se
 import { PAPER_DATA } from '@/lib/mock-academic';
 import { PaperSearch } from '@/components/papers/PaperSearch';
 import { AiAssistantPanel } from '@/components/ai/AiAssistantPanel';
-import { AcademicPaper, AiAssistantResult } from '@shared/types';
+import { AcademicPaper, AiAssistantResult, AiTaskType } from '@shared/types';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/store/use-app-store';
@@ -25,7 +25,7 @@ export function PaperReaderPage() {
     setCurrentPaper(paper);
     setViewMode('read');
   };
-  const handleAiAction = async (text: string, type: 'interpret' | 'translate') => {
+  const handleAiAction = async (text: string, type: AiTaskType) => {
     setAiPanelOpen(true);
     setIsAiProcessing(true);
     setBubblePos(null);

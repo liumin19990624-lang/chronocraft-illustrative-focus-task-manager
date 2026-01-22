@@ -42,10 +42,10 @@ export function AiAssistantPanel({ isOpen, onClose, result, isProcessing, onAppl
     if (!result?.metadata?.score) return [];
     const score = result.metadata.score;
     return [
-      { subject: 'Grammar', A: score.grammar },
-      { subject: 'Logic', A: score.logic },
-      { subject: 'Originality', A: score.originality },
-      { subject: 'Innovation', A: score.innovation || 80 },
+      { subject: 'Grammar', A: score.grammar ?? 0 },
+      { subject: 'Logic', A: score.logic ?? 0 },
+      { subject: 'Originality', A: score.originality ?? 0 },
+      { subject: 'Innovation', A: score.innovation ?? 0 },
     ];
   }, [result]);
   if (!isOpen) return null;

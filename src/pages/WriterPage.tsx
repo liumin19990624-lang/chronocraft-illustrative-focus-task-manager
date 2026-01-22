@@ -7,6 +7,7 @@ import { PenTool, Sparkles, Zap, Languages, Brain, FileText, Target, Trophy } fr
 import { AiAssistantPanel } from '@/components/ai/AiAssistantPanel';
 import { useAppStore } from '@/store/use-app-store';
 import { AiAssistantResult } from '@shared/types';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 export function WriterPage() {
   const [text, setText] = useState('');
