@@ -84,7 +84,7 @@ function runSetupCommands() {
     "bun add react-swipeable",
     "bun add lucide-react@latest framer-motion clsx tailwind-merge",
     "bun add recharts",
-    "bun add canvas-confetti",
+    "bun add canvas-confetti @fontsource/playfair-display @fontsource/patrick-hand react-swipeable recharts lucide-react framer-motion clsx tailwind-merge",
     "bun add @fontsource/playfair-display",
     "bun add @fontsource/patrick-hand"
 ];
