@@ -86,7 +86,7 @@ export function StatsPage() {
         <Card className="lg:col-span-8 border-none shadow-soft rounded-[3rem] p-8 bg-card/40 backdrop-blur-xl">
           <CardHeader className="px-0 pt-0 pb-8"><CardTitle className="text-2xl font-display font-bold text-foreground">近七日专注趋势 (Immersion Trend)</CardTitle></CardHeader>
           <div className="h-[400px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={400}>
               <AreaChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12, fontWeight: 700}} dy={10} />
@@ -100,7 +100,7 @@ export function StatsPage() {
         <Card className="lg:col-span-4 border-none shadow-soft rounded-[3rem] p-8 flex flex-col bg-card/40 backdrop-blur-xl">
           <CardHeader className="px-0 pt-0 pb-8"><CardTitle className="text-2xl font-display font-bold text-foreground">修为维度 (Capabilities)</CardTitle></CardHeader>
           <div className="h-[350px] w-full relative">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={350}>
               <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
                 <PolarGrid stroke="hsl(var(--muted-foreground)/0.2)" />
                 <PolarAngleAxis dataKey="subject" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12, fontWeight: 700 }} />

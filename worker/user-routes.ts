@@ -6,8 +6,13 @@ import { MOCK_SEARCH_RESULTS } from '../src/lib/mock-academic';
 export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
   app.get('/api/tasks', async (c) => {
     await TaskEntity.ensureSeed(c.env);
+    const userId = c.req.query('userId');
     const tasks = await TaskEntity.list(c.env);
-    return ok(c, tasks.items);
+    const allTasks = tasks.items || [];
+    const filteredTasks = userId
+      ? allTasks.filter(t => t.userId === userId)
+      : allTasks;
+    return ok(c, filteredTasks);
   });
   app.post('/api/tasks', async (c) => {
     const body = await c.req.json<Task>();
