@@ -1,8 +1,9 @@
 import { create } from 'zustand';
-import { Task, TimerState, TimerMode, UserStats, SocialPost, UserSettings } from '@shared/types';
+import { Task, TimerState, TimerMode, UserStats, SocialPost, UserSettings, AiAssistantResult, AiTaskType } from '@shared/types';
 import { api } from '@/lib/api-client';
 import { isYesterday, isToday, parseISO } from 'date-fns';
 import { toast } from 'sonner';
+import { MOCK_AI_RESPONSES } from '@/lib/mock-academic';
 interface AppStore {
   tasks: Task[];
   socialPosts: SocialPost[];
@@ -30,17 +31,10 @@ interface AppStore {
   setTimerMode: (mode: TimerMode) => void;
   setDistracted: (distracted: boolean) => void;
   awardRewards: (xp: number, coins: number) => void;
+  requestAiAssistant: (text: string, type: AiTaskType) => Promise<AiAssistantResult>;
 }
 const POMODORO_TIME = 25 * 60;
-const SHORT_BREAK = 5 * 60;
-const LONG_BREAK = 15 * 60;
-const DEFAULT_SETTINGS: UserSettings = {
-  fontScale: 1.0,
-  themePreference: 'system',
-  privacyMode: false,
-  notificationsEnabled: true,
-  accentColor: '#88C0D0'
-};
+const DEFAULT_SETTINGS: UserSettings = { fontScale: 1.0, themePreference: 'system', privacyMode: false, notificationsEnabled: true, accentColor: '#88C0D0' };
 export const useAppStore = create<AppStore>((set, get) => ({
   tasks: [],
   socialPosts: [],
@@ -48,28 +42,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
   isLoading: true,
   error: null,
   showArchived: false,
-  timer: {
-    mode: 'focus',
-    timeLeft: POMODORO_TIME,
-    isRunning: false,
-    activeTaskId: null,
-    isPaused: false,
-    isDistracted: false,
-  },
+  timer: { mode: 'focus', timeLeft: POMODORO_TIME, isRunning: false, activeTaskId: null, isPaused: false, isDistracted: false },
   initUser: (nickname: string) => {
-    const uid = crypto.randomUUID();
     const newUser: UserStats = {
-      id: uid,
-      nickname,
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${nickname}`,
-      level: 1,
-      xp: 0,
-      coins: 0,
-      streak: 0,
-      totalFocusMinutes: 0,
-      totalTasksCompleted: 0,
-      unlockedAchievements: [],
-      settings: DEFAULT_SETTINGS,
+      id: crypto.randomUUID(), nickname, avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${nickname}`,
+      level: 1, xp: 0, coins: 0, streak: 0, totalFocusMinutes: 0, totalTasksCompleted: 0, unlockedAchievements: [], settings: DEFAULT_SETTINGS,
     };
     localStorage.setItem('xian_user', JSON.stringify(newUser));
     set({ userStats: newUser });
@@ -81,20 +58,20 @@ export const useAppStore = create<AppStore>((set, get) => ({
     try {
       const tasks = await api<Task[]>(`/api/tasks?userId=${user.id}`);
       set({ tasks, isLoading: false });
-    } catch (error) {
-      set({ error: (error as Error).message, isLoading: false });
-    }
+    } catch (e) { set({ error: "Failed to load tasks", isLoading: false }); }
   },
   fetchStats: async () => {
     const localUser = localStorage.getItem('xian_user');
     if (localUser) {
-      const parsed = JSON.parse(localUser);
-      set({ userStats: parsed });
       try {
+        const parsed = JSON.parse(localUser);
+        set({ userStats: parsed });
         const remote = await api<UserStats>(`/api/stats?userId=${parsed.id}`);
         set({ userStats: remote });
         localStorage.setItem('xian_user', JSON.stringify(remote));
-      } catch (e) { console.error("Sync failed", e); }
+      } catch (e) { 
+        console.warn("[CONSOLE] Local state active, sync deferred", e); 
+      }
     }
     set({ isLoading: false });
   },
@@ -116,123 +93,74 @@ export const useAppStore = create<AppStore>((set, get) => ({
     } catch (e) { console.error(e); }
   },
   likePost: async (id) => {
-    set(state => ({
-      socialPosts: state.socialPosts.map(p => p.id === id ? { ...p, likes: p.likes + 1 } : p)
-    }));
-    try {
-      await api(`/api/community/${id}/like`, { method: 'POST' });
-    } catch (e) { get().fetchPosts(); }
+    set(state => ({ socialPosts: state.socialPosts.map(p => p.id === id ? { ...p, likes: p.likes + 1 } : p) }));
+    try { await api(`/api/community/${id}/like`, { method: 'POST' }); } catch (e) { get().fetchPosts(); }
   },
   updateSettings: async (updates) => {
     const stats = get().userStats;
     if (!stats) return;
-    const newSettings = { ...stats.settings, ...updates };
-    const updatedStats = { ...stats, settings: newSettings };
-    set({ userStats: updatedStats });
-    localStorage.setItem('xian_user', JSON.stringify(updatedStats));
-    try {
-      await api('/api/stats', { method: 'PATCH', body: JSON.stringify({ settings: newSettings }) });
-    } catch (e) { console.error(e); }
+    const newStats = { ...stats, settings: { ...stats.settings, ...updates } };
+    set({ userStats: newStats });
+    localStorage.setItem('xian_user', JSON.stringify(newStats));
+    try { await api('/api/stats', { method: 'PATCH', body: JSON.stringify({ settings: updates }) }); } catch (e) { console.error(e); }
   },
   awardRewards: async (xpGain, coinGain) => {
     const stats = get().userStats;
     if (!stats) return;
     const newXP = stats.xp + xpGain;
-    const currentLevel = stats.level;
     const newLevel = Math.floor(newXP / 1000) + 1;
-    if (newLevel > currentLevel) {
-      toast.success(`境界突破！`, { description: `恭喜道���晋升至第 ${newLevel} 重天！` });
-    }
-    const updatedStats = {
-      ...stats,
-      xp: newXP,
-      level: newLevel,
-      coins: stats.coins + coinGain
-    };
-    set({ userStats: updatedStats });
-    localStorage.setItem('xian_user', JSON.stringify(updatedStats));
-    api('/api/stats', { method: 'PATCH', body: JSON.stringify(updatedStats) });
+    const updated = { ...stats, xp: newXP, level: newLevel, coins: stats.coins + coinGain };
+    set({ userStats: updated });
+    localStorage.setItem('xian_user', JSON.stringify(updated));
+    api('/api/stats', { method: 'PATCH', body: JSON.stringify(updated) });
   },
   addTask: async (taskData) => {
     const user = get().userStats;
     if (!user) return;
-    const newTask = await api<Task>('/api/tasks', {
-      method: 'POST',
-      body: JSON.stringify({ ...taskData, userId: user.id, status: 0 }),
-    });
-    set((state) => ({ tasks: [newTask, ...state.tasks] }));
+    const newTask = await api<Task>('/api/tasks', { method: 'POST', body: JSON.stringify({ ...taskData, userId: user.id, status: 0 }) });
+    set(s => ({ tasks: [newTask, ...s.tasks] }));
   },
   updateTask: async (id, updates) => {
-    set((state) => ({
-      tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
-    }));
-    try {
-      await api(`/api/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(updates) });
-    } catch (error) { get().fetchTasks(); }
+    set(s => ({ tasks: s.tasks.map(t => t.id === id ? { ...t, ...updates } : t) }));
+    try { await api(`/api/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(updates) }); } catch (e) { get().fetchTasks(); }
   },
   deleteTask: async (id) => {
-    set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
-    try {
-      await api(`/api/tasks/${id}`, { method: 'DELETE' });
-    } catch (error) { get().fetchTasks(); }
+    set(s => ({ tasks: s.tasks.filter(t => t.id !== id) }));
+    try { await api(`/api/tasks/${id}`, { method: 'DELETE' }); } catch (e) { get().fetchTasks(); }
   },
   completeTask: (id) => {
     const task = get().tasks.find(t => t.id === id);
     if (!task || task.status === 2) return;
     get().updateTask(id, { status: 2, completedAt: new Date().toISOString() });
     get().awardRewards(150, 50);
-    const stats = get().userStats;
-    if (!stats) return;
-    const lastActive = stats.lastActiveDate ? parseISO(stats.lastActiveDate) : null;
-    let newStreak = stats.streak;
-    if (!lastActive || isYesterday(lastActive)) {
-      newStreak += 1;
-    } else if (!isToday(lastActive)) {
-      newStreak = 1;
-    }
-    const updatedStats = {
-      ...stats,
-      streak: newStreak,
-      totalTasksCompleted: stats.totalTasksCompleted + 1,
-      lastActiveDate: new Date().toISOString()
-    };
-    set({ userStats: updatedStats });
-    localStorage.setItem('xian_user', JSON.stringify(updatedStats));
-    if (get().timer.activeTaskId === id) get().stopFocus();
   },
-  toggleShowArchived: () => set((state) => ({ showArchived: !state.showArchived })),
-  startFocus: (taskId) => set((state) => ({
-    timer: { ...state.timer, activeTaskId: taskId, isRunning: true, isPaused: false, mode: 'focus', timeLeft: POMODORO_TIME, isDistracted: false }
-  })),
-  stopFocus: () => set((state) => ({
-    timer: { ...state.timer, isRunning: false, isPaused: false, activeTaskId: null, timeLeft: POMODORO_TIME, isDistracted: false }
-  })),
+  requestAiAssistant: async (text, type) => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const responseContent = MOCK_AI_RESPONSES[type] || "笔灵由于��力不支，未能给出回应。";
+        const result: AiAssistantResult = {
+          taskId: crypto.randomUUID(),
+          type,
+          content: responseContent,
+          originalText: text,
+          metadata: type === 'evaluate' ? {
+            score: { grammar: 92, logic: 95, originality: 98 },
+            suggestions: ["逻辑严密", "��创度高"]
+          } : undefined
+        };
+        resolve(result);
+      }, 2000);
+    });
+  },
+  toggleShowArchived: () => set(s => ({ showArchived: !s.showArchived })),
+  startFocus: (taskId) => set(s => ({ timer: { ...s.timer, activeTaskId: taskId, isRunning: true, isPaused: false, mode: 'focus', timeLeft: POMODORO_TIME, isDistracted: false } })),
+  stopFocus: () => set(s => ({ timer: { ...s.timer, isRunning: false, activeTaskId: null, timeLeft: POMODORO_TIME, isDistracted: false } })),
   tick: () => {
-    const { timer, tasks } = get();
+    const { timer } = get();
     if (!timer.isRunning || timer.isPaused || timer.timeLeft <= 0) return;
-    const newTime = timer.timeLeft - 1;
-    set((state) => ({ timer: { ...state.timer, timeLeft: newTime } }));
-    if (newTime === 0 && timer.activeTaskId) {
-      const task = tasks.find(t => t.id === timer.activeTaskId);
-      if (task) {
-        get().updateTask(task.id, { pomodoroSpent: task.pomodoroSpent + 1 });
-        get().awardRewards(100, 20);
-      }
-    }
+    set(s => ({ timer: { ...s.timer, timeLeft: s.timer.timeLeft - 1 } }));
   },
-  setDistracted: (distracted) => set((state) => ({
-    timer: { ...state.timer, isDistracted: distracted, isPaused: distracted, isRunning: !distracted }
-  })),
-  toggleTimer: () => set((state) => ({
-    timer: { ...state.timer, isRunning: !state.timer.isRunning, isPaused: state.timer.isRunning }
-  })),
-  setTimerMode: (mode) => set((state) => ({
-    timer: {
-      ...state.timer,
-      mode,
-      timeLeft: mode === 'focus' ? POMODORO_TIME : mode === 'short-break' ? SHORT_BREAK : LONG_BREAK,
-      isRunning: false,
-      isPaused: false
-    }
-  }))
+  setDistracted: (distracted) => set(s => ({ timer: { ...s.timer, isDistracted: distracted, isPaused: distracted, isRunning: !distracted } })),
+  toggleTimer: () => set(s => ({ timer: { ...s.timer, isRunning: !s.timer.isRunning, isPaused: s.timer.isRunning } })),
+  setTimerMode: (mode) => set(s => ({ timer: { ...s.timer, mode, timeLeft: mode === 'focus' ? POMODORO_TIME : 300, isRunning: false } }))
 }));

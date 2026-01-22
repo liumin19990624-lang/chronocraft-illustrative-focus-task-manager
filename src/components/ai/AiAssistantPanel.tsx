@@ -1,14 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Copy, Check, Loader2, Brain, X, RotateCcw, PenTool, Languages, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
 import { AiAssistantResult, AiTaskType } from '@shared/types';
-import { useAppStore } from '@/store/use-app-store';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 interface AiAssistantPanelProps {
@@ -20,34 +17,20 @@ interface AiAssistantPanelProps {
   onRetry?: () => void;
 }
 const taskConfig: Record<AiTaskType, { icon: any, color: string, label: string }> = {
-  interpret: { icon: Brain, color: "text-purple-500 bg-purple-500/10", label: "学术解��" },
+  interpret: { icon: Brain, color: "text-purple-500 bg-purple-500/10", label: "学术解读" },
   modify: { icon: PenTool, color: "text-blue-500 bg-blue-500/10", label: "风格优化" },
   translate: { icon: Languages, color: "text-orange-500 bg-orange-500/10", label: "语境转译" },
   evaluate: { icon: FileText, color: "text-emerald-500 bg-emerald-500/10", label: "监督学习" }
 };
 export function AiAssistantPanel({ isOpen, onClose, result, isProcessing, onApply, onRetry }: AiAssistantPanelProps) {
-  const [copied, setCopied] = useState(false);
-  const [activeVersion, setActiveVersion] = useState("0");
-  const isStreaming = useAppStore(s => s.isStreaming);
-  const streamingContent = useAppStore(s => s.streamingContent);
+  const [copied, setCopied] = React.useState(false);
   const handleCopy = () => {
-    const contentToCopy = result?.versions ? result.versions[parseInt(activeVersion)] : (result?.content || streamingContent);
-    if (!contentToCopy) return;
-    navigator.clipboard.writeText(contentToCopy);
+    if (!result?.content) return;
+    navigator.clipboard.writeText(result.content);
     setCopied(true);
     toast.success("已复制到识海");
     setTimeout(() => setCopied(false), 2000);
   };
-  const radarData = useMemo(() => {
-    if (!result?.metadata?.score) return [];
-    const score = result.metadata.score;
-    return [
-      { subject: 'Grammar', A: score.grammar ?? 0 },
-      { subject: 'Logic', A: score.logic ?? 0 },
-      { subject: 'Originality', A: score.originality ?? 0 },
-      { subject: 'Innovation', A: score.innovation ?? 0 },
-    ];
-  }, [result]);
   if (!isOpen) return null;
   return (
     <AnimatePresence>
@@ -55,11 +38,11 @@ export function AiAssistantPanel({ isOpen, onClose, result, isProcessing, onAppl
         initial={{ x: 400, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         exit={{ x: 400, opacity: 0 }}
-        className="fixed top-0 right-0 h-full w-[400px] z-[200] bg-card/90 backdrop-blur-2xl border-l border-border/50 shadow-2xl flex flex-col"
+        className="fixed top-0 right-0 h-full w-[400px] z-[200] bg-card/80 backdrop-blur-2xl border-l border-border/50 shadow-2xl flex flex-col"
       >
-        <header className="p-8 border-b border-border/50 flex items-center justify-between bg-secondary/10">
+        <header className="p-8 border-b border-border/50 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-lg">
+            <div className="h-10 w-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center">
               <Sparkles className="h-6 w-6" />
             </div>
             <div>
@@ -67,21 +50,18 @@ export function AiAssistantPanel({ isOpen, onClose, result, isProcessing, onAppl
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">AI Academic Assistant</p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="rounded-full hover:bg-destructive/10 hover:text-destructive" onClick={onClose}><X className="h-5 w-5" /></Button>
+          <Button variant="ghost" size="icon" className="rounded-full" onClick={onClose}><X className="h-5 w-5" /></Button>
         </header>
         <ScrollArea className="flex-1 p-8">
-          {(isProcessing || isStreaming) ? (
-            <div className="space-y-8 animate-fade-in">
-              <div className="p-6 rounded-3xl bg-primary/5 border border-primary/10 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-primary animate-pulse" />
-                <p className="text-base leading-relaxed font-medium whitespace-pre-wrap min-h-[100px]">
-                  {streamingContent}
-                  <span className="inline-block w-2 h-5 ml-1 bg-primary animate-pulse" />
-                </p>
+          {isProcessing ? (
+            <div className="h-full flex flex-col items-center justify-center space-y-6 pt-20">
+              <div className="relative">
+                <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full animate-pulse" />
+                <Loader2 className="h-16 w-16 text-primary animate-spin relative z-10" />
               </div>
-              <div className="flex flex-col items-center justify-center gap-4 py-10 opacity-40">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <p className="text-sm font-display italic">神识��鸣中...</p>
+              <div className="text-center space-y-2">
+                <p className="text-lg font-display font-bold">神识参悟中...</p>
+                <p className="text-xs text-muted-foreground italic">“千淘��漉虽辛苦，吹尽狂沙始到金。”</p>
               </div>
             </div>
           ) : result ? (
@@ -91,61 +71,38 @@ export function AiAssistantPanel({ isOpen, onClose, result, isProcessing, onAppl
                   {React.createElement(taskConfig[result.type].icon, { className: "h-3 w-3" })}
                   {taskConfig[result.type].label}
                 </Badge>
-                {onRetry && <Button variant="ghost" size="sm" onClick={onRetry} className="text-xs gap-1 h-8 rounded-lg"><RotateCcw className="h-3 w-3" /> 重构</Button>}
+                {onRetry && <Button variant="ghost" size="sm" onClick={onRetry} className="text-xs gap-1"><RotateCcw className="h-3 w-3" /> 重构</Button>}
               </div>
-              {result.versions && result.versions.length > 0 ? (
-                <Tabs value={activeVersion} onValueChange={setActiveVersion} className="w-full">
-                  <TabsList className="grid grid-cols-3 bg-secondary/50 rounded-xl h-10 p-1 mb-6">
-                    <TabsTrigger value="0" className="rounded-lg text-xs font-bold">方案一</TabsTrigger>
-                    <TabsTrigger value="1" className="rounded-lg text-xs font-bold">方案二</TabsTrigger>
-                    <TabsTrigger value="2" className="rounded-lg text-xs font-bold">方案三</TabsTrigger>
-                  </TabsList>
-                  {result.versions.map((v, i) => (
-                    <TabsContent key={i} value={String(i)} className="mt-0">
-                      <Card className="p-6 rounded-3xl border-none shadow-soft bg-white/60 dark:bg-slate-900/40 text-base leading-relaxed font-medium min-h-[150px]">
-                        {v}
-                      </Card>
-                    </TabsContent>
-                  ))}
-                </Tabs>
-              ) : (
-                <Card className="p-6 rounded-3xl border-none shadow-soft bg-white/60 dark:bg-slate-900/40 text-base leading-relaxed font-medium">
+              {result.originalText && (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">原文字句</p>
+                  <div className="p-4 bg-secondary/30 rounded-2xl border border-border/50 italic text-sm text-muted-foreground line-clamp-3">
+                    {result.originalText}
+                  </div>
+                </div>
+              )}
+              <div className="space-y-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-primary">笔灵结论</p>
+                <Card className="p-6 rounded-3xl border-none shadow-soft bg-white/50 text-base leading-relaxed font-medium">
                   {result.content}
                 </Card>
-              )}
+              </div>
               {result.metadata?.score && (
-                <div className="space-y-6">
-                  <div className="h-[250px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                        <PolarGrid stroke="hsl(var(--muted-foreground)/0.2)" />
-                        <PolarAngleAxis dataKey="subject" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10, fontWeight: 700 }} />
-                        <Radar
-                          name="Scholar"
-                          dataKey="A"
-                          stroke="hsl(var(--primary))"
-                          fill="hsl(var(--primary))"
-                          fillOpacity={0.4}
-                        />
-                      </RadarChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    {result.metadata.suggestions?.map((s, i) => (
-                      <div key={i} className="flex items-start gap-2 text-xs font-medium text-muted-foreground p-3 rounded-xl bg-secondary/30">
-                        <Check className="h-3 w-3 text-emerald-500 mt-0.5 shrink-0" />
-                        {s}
-                      </div>
-                    ))}
-                  </div>
+                <div className="grid grid-cols-3 gap-4">
+                  {Object.entries(result.metadata.score).map(([key, val]) => (
+                    <div key={key} className="text-center p-3 bg-primary/5 rounded-2xl border border-primary/10">
+                      <p className="text-[8px] font-bold uppercase text-muted-foreground">{key}</p>
+                      <p className="text-lg font-display font-bold text-primary">{val}</p>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center opacity-20 pt-20 text-center">
               <Brain className="h-24 w-24 mb-6" />
-              <p className="text-lg font-display font-bold">暂无神识指��</p>
-              <p className="text-sm">选中段落以���唤笔灵解读</p>
+              <p className="text-lg font-display font-bold">暂无任务指令</p>
+              <p className="text-sm">选中文本并点击下方按钮以召唤笔灵</p>
             </div>
           )}
         </ScrollArea>
@@ -155,8 +112,8 @@ export function AiAssistantPanel({ isOpen, onClose, result, isProcessing, onAppl
             复制识海
           </Button>
           {onApply && (
-            <Button className="flex-[2] rounded-2xl h-14 font-bold shadow-lg" onClick={() => onApply(result?.versions ? result.versions[parseInt(activeVersion)] : result?.content || "")}>
-              应用建议
+            <Button className="flex-[2] rounded-2xl h-14 font-bold shadow-lg" onClick={() => onApply(result?.content || "")}>
+              应用修改
             </Button>
           )}
         </footer>

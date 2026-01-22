@@ -1,5 +1,5 @@
-export type Priority = 1 | 2 | 3 | 4; // 1: 烈火, 2: 流水, 3: 巨石, 4: 清风
-export type TaskStatus = 0 | 1 | 2 | 3; // 0: 未开始, 1: 进行��, 2: 已完成, 3: 已过期
+export type Priority = 1 | 2 | 3 | 4; // 1: 烈��, 2: 流水, 3: 巨石, 4: 清风
+export type TaskStatus = 0 | 1 | 2 | 3; // 0: 未开始, 1: 进行中, 2: 已完成, 3: 已过期
 export type TaskType = 'reading' | 'listening' | 'writing' | 'other';
 export interface Task {
   id: string;
@@ -20,6 +20,7 @@ export interface Task {
   updatedAt: string;
   completedAt?: string;
 }
+export type PaperSource = 'arXiv' | 'CNKI' | 'PubMed' | 'Wanfang' | 'IEEE' | 'Nature';
 export interface AcademicPaper {
   id: string;
   title: string;
@@ -30,6 +31,24 @@ export interface AcademicPaper {
   citations: number;
   tags: string[];
   journal?: string;
+  source: PaperSource;
+  doi?: string;
+  isOA: boolean;
+}
+export type AiTaskType = 'interpret' | 'modify' | 'translate' | 'evaluate';
+export interface AiAssistantResult {
+  taskId: string;
+  type: AiTaskType;
+  content: string;
+  originalText?: string;
+  metadata?: {
+    score?: {
+      grammar: number;
+      logic: number;
+      originality: number;
+    };
+    suggestions?: string[];
+  };
 }
 export type PostCategory = 'dynamics' | 'collaborative' | 'qna';
 export interface SocialPost {

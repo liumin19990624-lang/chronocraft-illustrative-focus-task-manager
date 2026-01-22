@@ -25,8 +25,8 @@ export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
   });
   app.delete('/api/tasks/:id', async (c) => {
     const id = c.req.param('id');
-    const existed = await TaskEntity.delete(c.env, id);
-    return ok(c, { id, existed });
+    await TaskEntity.delete(c.env, id);
+    return ok(c, { success: true });
   });
   app.get('/api/stats', async (c) => {
     const entity = new StatsEntity(c.env, 'me');
@@ -39,31 +39,36 @@ export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
     const stats = await entity.mutate(s => ({ ...s, ...updates }));
     return ok(c, stats);
   });
-  // Academic Search
+  // Academic Search with platform and OA filtering
   app.get('/api/papers/search', async (c) => {
     const query = c.req.query('q')?.toLowerCase() || '';
-    if (!query) return ok(c, MOCK_SEARCH_RESULTS);
-    const filtered = MOCK_SEARCH_RESULTS.filter(p => 
-      p.title.toLowerCase().includes(query) || 
-      p.authors.toLowerCase().includes(query) ||
-      p.tags.some(t => t.toLowerCase().includes(query))
-    );
+    const source = c.req.query('source') || 'All';
+    const oa = c.req.query('oa') === 'true';
+    let filtered = MOCK_SEARCH_RESULTS;
+    if (query) {
+      filtered = filtered.filter(p =>
+        p.title.toLowerCase().includes(query) ||
+        p.authors.toLowerCase().includes(query) ||
+        p.tags.some(t => t.toLowerCase().includes(query)) ||
+        p.doi?.toLowerCase().includes(query)
+      );
+    }
+    if (source !== 'All') {
+      filtered = filtered.filter(p => p.source === source);
+    }
+    if (oa) {
+      filtered = filtered.filter(p => p.isOA);
+    }
     return ok(c, filtered);
   });
-  // Mock Community Data
-  const MOCK_POSTS: SocialPost[] = [
-    { id: 'p1', userId: 'u1', userName: '学术大圣', userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=monk', content: '今日参悟了 Transformer 架构，多头注意力机制妙不���言！', likes: 24, comments: 5, createdAt: new Date().toISOString(), category: 'dynamics', tags: ['学术'] },
-    { id: 'p2', userId: 'u2', userName: '炼语书生', userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=scholar', content: '坚持��听 30 天，终于在不看字���的情况下听懂了 Nature 的学术报告。', likes: 42, comments: 12, createdAt: new Date().toISOString(), category: 'dynamics', tags: ['坚持'] }
-  ];
   app.get('/api/community', async (c) => {
-    return ok(c, MOCK_POSTS);
+    return ok(c, [
+      { id: 'p1', userName: '学术��圣', content: '研习了 Transformer！', likes: 24, comments: 5, createdAt: new Date().toISOString(), category: 'dynamics', tags: ['学术'] }
+    ]);
   });
   app.post('/api/community', async (c) => {
     const body = await c.req.json<SocialPost>();
-    const newPost = { ...body, id: crypto.randomUUID(), createdAt: new Date().toISOString(), likes: 0, comments: 0 };
-    return ok(c, newPost);
+    return ok(c, { ...body, id: crypto.randomUUID(), createdAt: new Date().toISOString(), likes: 0, comments: 0 });
   });
-  app.post('/api/community/:id/like', async (c) => {
-    return ok(c, { success: true });
-  });
+  app.post('/api/community/:id/like', async (c) => ok(c, { success: true }));
 };
