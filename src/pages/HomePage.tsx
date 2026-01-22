@@ -5,9 +5,10 @@ import { TaskCard } from '@/components/task/TaskCard';
 import { CalendarWidget } from '@/components/dashboard/CalendarWidget';
 import { FocusOverlay } from '@/components/focus/FocusOverlay';
 import { useAppStore } from '@/store/use-app-store';
-import { Sparkles, Plus, Trophy, Flame, Inbox, BarChart3, Archive } from 'lucide-react';
+import { Sparkles, Plus, Trophy, Flame, Inbox, ScrollText, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NewTaskDialog } from '@/components/task/NewTaskDialog';
+import { RegisterDialog } from '@/components/registration/RegisterDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
@@ -21,146 +22,102 @@ export function HomePage() {
   const activeTaskId = useAppStore(s => s.timer.activeTaskId);
   const showArchived = useAppStore(s => s.showArchived);
   const toggleShowArchived = useAppStore(s => s.toggleShowArchived);
-  const streak = useAppStore(s => s.userStats.streak);
-  const level = useAppStore(s => s.userStats.level);
+  const userStats = useAppStore(s => s.userStats);
   useEffect(() => {
-    fetchTasks();
-    fetchStats();
+    fetchStats().then(() => fetchTasks());
   }, [fetchTasks, fetchStats]);
   const sortedTasks = useMemo(() => {
     let filtered = tasks;
-    if (!showArchived) {
-      filtered = tasks.filter(t => !t.isArchived);
-    }
+    if (!showArchived) filtered = tasks.filter(t => !t.isArchived);
     return [...filtered].sort((a, b) => {
-      const aDone = a.status === 'completed';
-      const bDone = b.status === 'completed';
-      if (aDone !== bDone) return aDone ? 1 : -1;
+      if (a.status !== b.status) return a.status - b.status;
       if (a.priority !== b.priority) return a.priority - b.priority;
       return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
     });
   }, [tasks, showArchived]);
-  const stats = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const todaysTasks = tasks.filter(t => t.dueDate.startsWith(today));
-    const completed = todaysTasks.filter(t => t.status === 'completed').length;
-    const totalFocusMinutes = tasks.reduce((acc, t) => acc + (t.pomodoroSpent * 25), 0);
-    const dailyGoal = 5;
-    const progress = (completed / dailyGoal) * 100;
-    return { completed, dailyGoal, progress, totalFocusHours: (totalFocusMinutes / 60).toFixed(1) };
-  }, [tasks]);
-  const incompleteCount = useMemo(() => 
-    tasks.filter(t => t.status !== 'completed' && !t.isArchived).length,
-  [tasks]);
+  if (!userStats) return <RegisterDialog />;
   return (
     <AppLayout className="bg-background">
-      <div className="py-8 md:py-10 lg:py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12">
         <ThemeToggle className="fixed top-4 right-4" />
         <FocusOverlay />
-        <div className={activeTaskId ? 'blur-xl grayscale opacity-40 transition-all duration-700 pointer-events-none' : 'transition-all duration-700'}>
+        <div className={cn("transition-all duration-700", activeTaskId && "blur-xl opacity-40 pointer-events-none")}>
           <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8">
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-primary rounded-[1.25rem] text-primary-foreground shadow-xl shadow-primary/20 rotate-[-5deg] hover:rotate-0 transition-transform">
-                  <Sparkles className="h-8 w-8" />
-                </div>
-                <div>
-                  <h1 className="text-5xl font-display font-bold tracking-tight">ChronoCraft</h1>
-                  <p className="text-muted-foreground font-medium text-lg mt-1">
-                    早安，建��师。今日尚有 <span className="text-foreground font-bold underline decoration-primary/40 underline-offset-4">{incompleteCount}</span> 个任务蓝图。
-                  </p>
-                </div>
+            <div className="flex items-center gap-6">
+              <div className="h-20 w-20 rounded-3xl bg-primary flex items-center justify-center shadow-2xl shadow-primary/20 rotate-[-4deg]">
+                <Sparkles className="h-10 w-10 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-5xl font-display font-bold tracking-tight">���途任务</h1>
+                <p className="text-muted-foreground font-medium text-lg mt-1">
+                  道友 <span className="text-foreground font-bold">{userStats.nickname}</span>，今日宜潜心修道。
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 bg-secondary/30 backdrop-blur-xl p-2 rounded-[2rem] border border-border/50 shadow-soft group hover:bg-secondary/50 transition-colors">
-              <div className="flex items-center gap-3 px-6 py-3 border-r border-border/50">
-                <Flame className="h-7 w-7 text-orange-500 drop-shadow-sm" />
+            <div className="flex items-center gap-4 bg-secondary/30 p-2 rounded-[2.5rem] border border-border/50">
+              <div className="px-6 py-3 border-r border-border/50 flex items-center gap-3">
+                <Flame className="h-6 w-6 text-orange-500" />
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">连续构筑</p>
-                  <p className="font-display font-bold text-xl leading-none mt-1">{streak} Days</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">道龄</p>
+                  <p className="font-display font-bold text-xl">{userStats.streak} 天</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 px-6 py-3">
-                <Trophy className="h-7 w-7 text-yellow-500 drop-shadow-sm" />
+              <div className="px-6 py-3 border-r border-border/50 flex items-center gap-3">
+                <Trophy className="h-6 w-6 text-yellow-500" />
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">工匠等级</p>
-                  <p className="font-display font-bold text-xl leading-none mt-1">Lv.{level}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">境界</p>
+                  <p className="font-display font-bold text-xl">第 {userStats.level} 重</p>
+                </div>
+              </div>
+              <div className="px-6 py-3 flex items-center gap-3">
+                <Wallet className="h-6 w-6 text-emerald-500" />
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">灵石</p>
+                  <p className="font-display font-bold text-xl">{userStats.coins}</p>
                 </div>
               </div>
             </div>
           </header>
           <main className="grid grid-cols-1 lg:grid-cols-12 gap-12">
             <section className="lg:col-span-8 space-y-10">
-              <div className="bg-gradient-to-r from-primary/5 to-transparent p-8 rounded-[2.5rem] border border-primary/10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="space-y-4 flex-1">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-primary" />
-                    <h3 className="font-display font-bold text-xl">今日进度看板</h3>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm font-bold">
-                      <span>构筑进度 ({stats.completed}/{stats.dailyGoal})</span>
-                      <span>{Math.round(stats.progress)}%</span>
-                    </div>
-                    <Progress value={stats.progress} className="h-3 rounded-full bg-secondary" />
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="text-center bg-background/60 p-4 rounded-2xl min-w-[100px] border">
-                    <p className="text-2xl font-display font-bold">{stats.totalFocusHours}</p>
-                    <p className="text-[10px] font-bold uppercase text-muted-foreground">专注时数</p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between px-2">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <h2 className="text-3xl font-display font-bold">任务卡组</h2>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={toggleShowArchived}
-                    className={cn("rounded-xl gap-2 text-xs font-bold uppercase tracking-widest", showArchived && "bg-accent text-accent-foreground shadow-sm")}
-                  >
-                    <Archive className="h-4 w-4" />
-                    {showArchived ? "隐藏���归档" : "查看归档"}
+                  <h2 className="text-3xl font-display font-bold">法诀卡组</h2>
+                  <Button variant="ghost" size="sm" onClick={toggleShowArchived} className="rounded-xl text-xs font-bold uppercase tracking-widest">
+                    {showArchived ? "隐藏封���" : "查看封存"}
                   </Button>
                 </div>
                 <NewTaskDialog>
-                  <Button className="rounded-2xl gap-3 px-8 h-14 text-lg font-bold shadow-2xl shadow-primary/20 hover:scale-105 transition-all">
-                    <Plus className="h-5 w-5" /> 开始新蓝图
+                  <Button className="rounded-2xl h-14 px-8 text-lg font-bold shadow-xl shadow-primary/20 hover:scale-105 transition-all">
+                    <Plus className="h-5 w-5 mr-2" /> 研习新法诀
                   </Button>
                 </NewTaskDialog>
               </div>
               <div className="space-y-6">
                 {isLoading ? (
-                  Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-[2rem]" />)
+                  Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-44 w-full rounded-4xl" />)
                 ) : sortedTasks.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-24 bg-secondary/10 rounded-[3rem] border-4 border-dashed border-muted-foreground/5 text-center">
-                    <Inbox className="h-20 w-20 text-muted-foreground/20 mb-6" />
-                    <p className="text-2xl font-display font-bold text-muted-foreground">空空如也</p>
-                    <p className="text-muted-foreground/60 mt-2 font-medium">暂时没有符合条件的任务，享受这一刻的宁静</p>
+                  <div className="flex flex-col items-center justify-center py-24 bg-secondary/10 rounded-5xl border-4 border-dashed border-muted-foreground/10">
+                    <Inbox className="h-16 w-16 text-muted-foreground/20 mb-4" />
+                    <p className="text-xl font-display font-bold text-muted-foreground">万法皆空，道法自然</p>
                   </div>
                 ) : (
-                  sortedTasks.map(task => (
-                    <TaskCard key={task.id} task={task} />
-                  ))
+                  sortedTasks.map(task => <TaskCard key={task.id} task={task} />)
                 )}
               </div>
             </section>
             <aside className="lg:col-span-4 space-y-12">
               <CalendarWidget />
-              <div className="p-10 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 rounded-[3rem] text-white space-y-6 shadow-2xl shadow-indigo-500/30 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 -mr-16 -mt-16 w-56 h-56 bg-white/10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-1000" />
-                <div className="space-y-2 relative z-10">
-                  <div className="bg-white/20 inline-flex items-center border-none text-white font-bold rounded-lg px-3 py-1 text-xs uppercase tracking-wider">工匠贴士</div>
-                  <h3 className="text-3xl font-display font-bold">深度构筑指南</h3>
+              <div className="p-10 bg-gradient-to-br from-primary to-primary/80 rounded-5xl text-primary-foreground space-y-6 shadow-2xl relative overflow-hidden group">
+                <div className="absolute -top-10 -right-10 h-40 w-40 bg-white/10 rounded-full blur-3xl" />
+                <div className="space-y-2">
+                  <div className="bg-white/20 inline-block px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-widest">宗门秘籍</div>
+                  <h3 className="text-3xl font-display font-bold">潜修之道</h3>
                 </div>
-                <p className="text-indigo-50/90 leading-relaxed font-medium text-lg italic">
-                  "专注时���是你的神圣画布。不要让琐碎的通知惊扰��正在成型的杰作。每一次深呼吸都是一次构筑。"
+                <p className="text-primary-foreground/80 leading-relaxed italic">
+                  “修道者，需守本心。每一息���注，皆是通往长生之基石。切莫为外物所扰，方能修得圆满。”
                 </p>
-                <Button variant="secondary" className="w-full bg-white text-indigo-600 hover:bg-indigo-50 font-bold rounded-2xl h-14 text-lg border-none shadow-xl">
-                  阅读完整指南
-                </Button>
+                <Button variant="secondary" className="w-full h-14 rounded-2xl font-bold text-lg shadow-xl">悟道手册</Button>
               </div>
             </aside>
           </main>
