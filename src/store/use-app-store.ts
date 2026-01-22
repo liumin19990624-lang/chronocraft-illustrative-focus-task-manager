@@ -6,16 +6,19 @@ interface AppStore {
   isLoading: boolean;
   error: string | null;
   timer: TimerState;
+  showArchived: boolean;
   fetchTasks: () => Promise<void>;
-  addTask: (taskData: any) => Promise<void>;
+  addTask: (taskData: Partial<Task>) => Promise<void>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   completeTask: (id: string) => void;
+  toggleShowArchived: () => void;
   startFocus: (taskId: string) => void;
   stopFocus: () => void;
   tick: () => void;
   toggleTimer: () => void;
   setTimerMode: (mode: TimerMode) => void;
+  saveSessionNote: (taskId: string, note: string) => void;
 }
 const POMODORO_TIME = 25 * 60;
 const SHORT_BREAK = 5 * 60;
@@ -24,6 +27,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   tasks: [],
   isLoading: true,
   error: null,
+  showArchived: false,
   timer: {
     mode: 'focus',
     timeLeft: POMODORO_TIME,
@@ -49,9 +53,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
       set((state) => ({ tasks: [newTask, ...state.tasks] }));
     } catch (error) {
       console.error("Add task failed", error);
+      throw error;
     }
   },
   updateTask: async (id, updates) => {
+    const previousTasks = get().tasks;
     set((state) => ({
       tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
     }));
@@ -61,42 +67,45 @@ export const useAppStore = create<AppStore>((set, get) => ({
         body: JSON.stringify(updates),
       });
     } catch (error) {
-      get().fetchTasks(); // Rollback on error
+      set({ tasks: previousTasks });
+      throw error;
     }
   },
   deleteTask: async (id) => {
+    const previousTasks = get().tasks;
     set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
     try {
       await api(`/api/tasks/${id}`, { method: 'DELETE' });
     } catch (error) {
-      get().fetchTasks();
+      set({ tasks: previousTasks });
     }
   },
   completeTask: (id) => {
-    get().updateTask(id, { status: 'completed' as TaskStatus });
+    get().updateTask(id, { status: 'completed' as TaskStatus, completedAt: new Date().toISOString() });
     if (get().timer.activeTaskId === id) {
       get().stopFocus();
     }
   },
+  toggleShowArchived: () => set((state) => ({ showArchived: !state.showArchived })),
   startFocus: (taskId) => set((state) => ({
     timer: { ...state.timer, activeTaskId: taskId, isRunning: true, isPaused: false, mode: 'focus', timeLeft: POMODORO_TIME }
   })),
   stopFocus: () => set((state) => ({
     timer: { ...state.timer, isRunning: false, isPaused: false, activeTaskId: null, timeLeft: POMODORO_TIME }
   })),
-  tick: () => set((state) => {
-    if (!state.timer.isRunning || state.timer.timeLeft <= 0) return state;
-    const newTime = state.timer.timeLeft - 1;
-    if (newTime === 0 && state.timer.activeTaskId) {
-      // Auto increment pomodoro spent
-      const taskId = state.timer.activeTaskId;
-      setTimeout(() => {
-        const task = get().tasks.find(t => t.id === taskId);
-        if (task) get().updateTask(taskId, { pomodoroSpent: task.pomodoroSpent + 1 });
-      }, 0);
+  tick: () => {
+    const { timer, tasks } = get();
+    if (!timer.isRunning || timer.timeLeft <= 0) return;
+    const newTime = timer.timeLeft - 1;
+    set((state) => ({ timer: { ...state.timer, timeLeft: newTime } }));
+    if (newTime === 0 && timer.activeTaskId) {
+      const taskId = timer.activeTaskId;
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        get().updateTask(taskId, { pomodoroSpent: task.pomodoroSpent + 1 });
+      }
     }
-    return { timer: { ...state.timer, timeLeft: newTime } };
-  }),
+  },
   toggleTimer: () => set((state) => ({
     timer: { ...state.timer, isRunning: !state.timer.isRunning, isPaused: state.timer.isRunning }
   })),
@@ -109,4 +118,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
       isPaused: false
     }
   })),
+  saveSessionNote: (taskId, note) => {
+    const task = get().tasks.find(t => t.id === taskId);
+    if (task) {
+      const newDesc = task.description ? `${task.description}\n\n[Session Note]: ${note}` : `[Session Note]: ${note}`;
+      get().updateTask(taskId, { description: newDesc });
+    }
+  }
 }));
