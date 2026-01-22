@@ -18,6 +18,23 @@ export interface Task {
   updatedAt: string;
   completedAt?: string;
 }
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  unlockedAt?: string;
+}
+export interface UserStats {
+  id: string;
+  level: number;
+  xp: number;
+  streak: number;
+  totalFocusMinutes: number;
+  totalTasksCompleted: number;
+  lastActiveDate?: string;
+  unlockedAchievements: string[];
+}
 export type TimerMode = 'focus' | 'short-break' | 'long-break';
 export interface TimerState {
   mode: TimerMode;

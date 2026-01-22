@@ -1,7 +1,19 @@
 import { Hono } from 'hono';
-import { ok, bad, notFound, Env } from './core-utils';
+import { ok, bad, notFound, Env, Entity, EntityStatics } from './core-utils';
 import { TaskEntity } from './entities';
-import type { Task } from '@shared/types';
+import type { Task, UserStats } from '@shared/types';
+class StatsEntity extends Entity<UserStats> {
+  static readonly entityName = "stats";
+  static readonly initialState: UserStats = {
+    id: "me",
+    level: 1,
+    xp: 0,
+    streak: 0,
+    totalFocusMinutes: 0,
+    totalTasksCompleted: 0,
+    unlockedAchievements: [],
+  };
+}
 export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
   app.get('/api/tasks', async (c) => {
     const tasks = await TaskEntity.list(c.env);
@@ -46,5 +58,17 @@ export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
     const existed = await TaskEntity.delete(c.env, id);
     if (!existed) return notFound(c, '任务未找到');
     return ok(c, { id });
+  });
+  // User Stats Endpoints
+  app.get('/api/stats', async (c) => {
+    const entity = new StatsEntity(c.env, 'me');
+    const stats = await entity.getState();
+    return ok(c, stats);
+  });
+  app.patch('/api/stats', async (c) => {
+    const updates = await c.req.json<Partial<UserStats>>();
+    const entity = new StatsEntity(c.env, 'me');
+    const stats = await entity.mutate(s => ({ ...s, ...updates }));
+    return ok(c, stats);
   });
 };

@@ -1,13 +1,17 @@
 import { create } from 'zustand';
-import { Task, TimerState, TimerMode, TaskStatus } from '@shared/types';
+import { Task, TimerState, TimerMode, TaskStatus, UserStats, Achievement } from '@shared/types';
 import { api } from '@/lib/api-client';
+import { isYesterday, isToday, parseISO, startOfDay } from 'date-fns';
+import { toast } from 'sonner';
 interface AppStore {
   tasks: Task[];
+  userStats: UserStats;
   isLoading: boolean;
   error: string | null;
   timer: TimerState;
   showArchived: boolean;
   fetchTasks: () => Promise<void>;
+  fetchStats: () => Promise<void>;
   addTask: (taskData: Partial<Task>) => Promise<void>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
@@ -19,12 +23,23 @@ interface AppStore {
   toggleTimer: () => void;
   setTimerMode: (mode: TimerMode) => void;
   saveSessionNote: (taskId: string, note: string) => void;
+  awardXP: (amount: number) => void;
 }
 const POMODORO_TIME = 25 * 60;
 const SHORT_BREAK = 5 * 60;
 const LONG_BREAK = 15 * 60;
+const INITIAL_STATS: UserStats = {
+  id: 'me',
+  level: 1,
+  xp: 0,
+  streak: 0,
+  totalFocusMinutes: 0,
+  totalTasksCompleted: 0,
+  unlockedAchievements: [],
+};
 export const useAppStore = create<AppStore>((set, get) => ({
   tasks: [],
+  userStats: INITIAL_STATS,
   isLoading: true,
   error: null,
   showArchived: false,
@@ -43,6 +58,27 @@ export const useAppStore = create<AppStore>((set, get) => ({
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
     }
+  },
+  fetchStats: async () => {
+    try {
+      const stats = await api<UserStats>('/api/stats');
+      set({ userStats: stats });
+    } catch (error) {
+      console.error("Failed to fetch stats", error);
+    }
+  },
+  awardXP: async (amount: number) => {
+    const stats = get().userStats;
+    const newXP = stats.xp + amount;
+    const nextLevelXP = stats.level * 1000;
+    let newLevel = stats.level;
+    if (newXP >= nextLevelXP) {
+      newLevel += 1;
+      toast.success(`���级提升！`, { description: `恭喜你达到了等级 ${newLevel}，资深建筑师！` });
+    }
+    const updatedStats = { ...stats, xp: newXP, level: newLevel };
+    set({ userStats: updatedStats });
+    await api('/api/stats', { method: 'PATCH', body: JSON.stringify(updatedStats) });
   },
   addTask: async (taskData) => {
     try {
@@ -81,7 +117,27 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
   },
   completeTask: (id) => {
+    const task = get().tasks.find(t => t.id === id);
+    if (!task || task.status === 'completed') return;
     get().updateTask(id, { status: 'completed' as TaskStatus, completedAt: new Date().toISOString() });
+    get().awardXP(100);
+    // Update streak logic
+    const stats = get().userStats;
+    const lastActive = stats.lastActiveDate ? parseISO(stats.lastActiveDate) : null;
+    let newStreak = stats.streak;
+    if (!lastActive || isYesterday(lastActive)) {
+      newStreak += 1;
+    } else if (!isToday(lastActive)) {
+      newStreak = 1;
+    }
+    const updatedStats = {
+      ...stats,
+      streak: newStreak,
+      totalTasksCompleted: stats.totalTasksCompleted + 1,
+      lastActiveDate: new Date().toISOString()
+    };
+    set({ userStats: updatedStats });
+    api('/api/stats', { method: 'PATCH', body: JSON.stringify(updatedStats) });
     if (get().timer.activeTaskId === id) {
       get().stopFocus();
     }
@@ -94,7 +150,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     timer: { ...state.timer, isRunning: false, isPaused: false, activeTaskId: null, timeLeft: POMODORO_TIME }
   })),
   tick: () => {
-    const { timer, tasks } = get();
+    const { timer, tasks, userStats } = get();
     if (!timer.isRunning || timer.timeLeft <= 0) return;
     const newTime = timer.timeLeft - 1;
     set((state) => ({ timer: { ...state.timer, timeLeft: newTime } }));
@@ -103,6 +159,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
       const task = tasks.find(t => t.id === taskId);
       if (task) {
         get().updateTask(taskId, { pomodoroSpent: task.pomodoroSpent + 1 });
+        get().awardXP(50);
+        const updatedStats = { ...userStats, totalFocusMinutes: userStats.totalFocusMinutes + 25 };
+        set({ userStats: updatedStats });
+        api('/api/stats', { method: 'PATCH', body: JSON.stringify(updatedStats) });
       }
     }
   },
