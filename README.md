@@ -1,6 +1,6 @@
 # Chronocraft
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/liumin19990624-lang/chronocraft-illustrative-focus-task-manager)
 
 [![Stars](https://img.shields.io/github/stars/YOUR_USERNAME/chronocraft-ngrg89szrsnaoirplqwim?style=social)](https://github.com/YOUR_USERNAME/chronocraft-ngrg89szrsnaoirplqwim/stargazers)
 [![Forks](https://img.shields.io/github/forks/YOUR_USERNAME/chronocraft-ngrg89szrsnaoirplqwim?style=social)](https://github.com/YOUR_USERNAME/chronocraft-ngrg89szrsnaoirplqwim/network/members)
@@ -103,7 +103,7 @@ bun run build
 npx wrangler deploy
 ```
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/liumin19990624-lang/chronocraft-illustrative-focus-task-manager)
 
 **Configuration**: Edit `wrangler.jsonc` for custom bindings/migrations. Assets are served as SPA.
 
