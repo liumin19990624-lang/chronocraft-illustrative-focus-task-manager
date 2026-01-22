@@ -6,34 +6,37 @@ import { Play, Pause, X, CheckCircle2 } from 'lucide-react';
 import { triggerConfetti } from '@/components/ui/confetti';
 import { Badge } from '@/components/ui/badge';
 import { toast } from "sonner";
+import { useShallow } from 'zustand/react/shallow';
 export function FocusOverlay() {
-  const timer = useAppStore(s => s.timer);
-  const tasks = useAppStore(s => s.tasks);
+  const activeTaskId = useAppStore(s => s.timer.activeTaskId);
+  const isRunning = useAppStore(s => s.timer.isRunning);
+  const timeLeft = useAppStore(s => s.timer.timeLeft);
+  const tasks = useAppStore(useShallow(s => s.tasks));
   const tick = useAppStore(s => s.tick);
   const toggleTimer = useAppStore(s => s.toggleTimer);
   const stopFocus = useAppStore(s => s.stopFocus);
   const completeTask = useAppStore(s => s.completeTask);
-  const activeTask = tasks.find(t => t.id === timer.activeTaskId);
+  const activeTask = tasks.find(t => t.id === activeTaskId);
   useEffect(() => {
     let interval: any;
-    if (timer.isRunning) {
+    if (isRunning && activeTaskId) {
       interval = setInterval(() => tick(), 1000);
     }
     return () => clearInterval(interval);
-  }, [timer.isRunning, tick]);
+  }, [isRunning, activeTaskId, tick]);
   useEffect(() => {
-    if (timer.timeLeft === 0 && timer.activeTaskId) {
-      toast.success("专注时段结束！���息一下吧。");
+    if (timeLeft === 0 && activeTaskId) {
+      toast.success("专注时段结束��休息一下吧。");
       stopFocus();
     }
-  }, [timer.timeLeft, timer.activeTaskId, stopFocus])
-  if (!timer.activeTaskId) return null;
-  const minutes = Math.floor(timer.timeLeft / 60);
-  const seconds = timer.timeLeft % 60;
+  }, [timeLeft, activeTaskId, stopFocus]);
+  if (!activeTaskId) return null;
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
   const handleComplete = () => {
     triggerConfetti();
-    if (timer.activeTaskId) {
-      completeTask(timer.activeTaskId);
+    if (activeTaskId) {
+      completeTask(activeTaskId);
       toast.success(`任务 "${activeTask?.title}" 已完成! 太棒了!`);
     }
   };
@@ -66,7 +69,7 @@ export function FocusOverlay() {
           </div>
           <div className="relative flex items-center justify-center">
             <motion.div
-              animate={{ scale: timer.isRunning ? [1, 1.02, 1] : 1 }}
+              animate={{ scale: isRunning ? [1, 1.02, 1] : 1 }}
               transition={{ repeat: Infinity, duration: 2 }}
               className="text-7xl sm:text-9xl md:text-[12rem] font-bold tabular-nums tracking-tighter"
             >
@@ -80,7 +83,7 @@ export function FocusOverlay() {
               className="h-16 w-16 sm:h-20 sm:w-20 rounded-full border-2"
               onClick={toggleTimer}
             >
-              {timer.isRunning ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8 ml-1" />}
+              {isRunning ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8 ml-1" />}
             </Button>
             <Button
               size="lg"

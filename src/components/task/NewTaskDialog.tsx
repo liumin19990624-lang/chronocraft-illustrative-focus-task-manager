@@ -23,9 +23,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAppStore } from '@/store/use-app-store';
 import { toast } from 'sonner';
+import { Priority } from '@shared/types';
 const taskSchema = z.object({
   title: z.string().min(3, '标题至少需要3个字符'),
-  priority: z.coerce.number().min(1).max(4),
+  priority: z.coerce.number().min(1).max(4).transform(val => val as Priority),
   pomodoroEstimate: z.coerce.number().int().min(1, '至少需要1个番茄钟'),
 });
 type TaskFormData = z.infer<typeof taskSchema>;
@@ -42,19 +43,26 @@ export function NewTaskDialog({ children }: { children: React.ReactNode }) {
     resolver: zodResolver(taskSchema),
     defaultValues: {
       title: '',
-      priority: 3,
+      priority: 3 as Priority,
       pomodoroEstimate: 1,
     },
   });
   const onSubmit = async (data: TaskFormData) => {
     const taskData = {
-      ...data,
-      dueDate: new Date().toISOString(), // Defaulting due date to now for simplicity
+      title: data.title,
+      priority: data.priority as Priority,
+      pomodoroEstimate: data.pomodoroEstimate,
+      dueDate: new Date().toISOString(),
+      description: '',
     };
-    await addTask(taskData);
-    toast.success(`任务 "${data.title}" 已添加!`);
-    reset();
-    setOpen(false);
+    try {
+      await addTask(taskData);
+      toast.success(`任务 "${data.title}" 已添加!`);
+      reset();
+      setOpen(false);
+    } catch (err) {
+      toast.error("添加任务失败");
+    }
   };
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -63,7 +71,7 @@ export function NewTaskDialog({ children }: { children: React.ReactNode }) {
         <DialogHeader>
           <DialogTitle>新建任务蓝图</DialogTitle>
           <DialogDescription>
-            ���划你的下一个杰作。填写下面的详细信息。
+            规划你的下一个杰作。填写下面的详细信息。
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
@@ -85,14 +93,14 @@ export function NewTaskDialog({ children }: { children: React.ReactNode }) {
                 name="priority"
                 control={control}
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
+                  <Select onValueChange={(val) => field.onChange(Number(val))} value={String(field.value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="选择优先级" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">P1 - 紧��</SelectItem>
+                      <SelectItem value="1">P1 - 紧急</SelectItem>
                       <SelectItem value="2">P2 - 重要</SelectItem>
-                      <SelectItem value="3">P3 - 普��</SelectItem>
+                      <SelectItem value="3">P3 - 普通</SelectItem>
                       <SelectItem value="4">P4 - 随意</SelectItem>
                     </SelectContent>
                   </Select>

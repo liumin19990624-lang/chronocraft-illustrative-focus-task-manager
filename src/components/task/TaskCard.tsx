@@ -1,5 +1,5 @@
 import React from 'react';
-import { Task, Priority, TaskStatus } from '@/types/app-types';
+import { Task, Priority, TaskStatus } from '@shared/types';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,12 +20,6 @@ const priorityColors: Record<Priority, string> = {
   3: "border-l-blue-500",
   4: "border-l-slate-400",
 };
-const statusMap: Record<TaskStatus, string> = {
-  todo: '未开始',
-  'in-progress': '进行中',
-  completed: '已完成',
-  archived: '已归档'
-}
 export function TaskCard({ task }: TaskCardProps) {
   const completeTask = useAppStore(s => s.completeTask);
   const deleteTask = useAppStore(s => s.deleteTask);
@@ -44,7 +38,8 @@ export function TaskCard({ task }: TaskCardProps) {
   const handlers = useSwipeable({
     onSwipedLeft: () => handleDelete(),
     onSwipedRight: (e) => {
-      triggerTaskCompletionConfetti(window.innerWidth - 50, e.event.clientY);
+      const y = e.initial ? e.initial[1] : 0;
+      triggerTaskCompletionConfetti(window.innerWidth - 50, y);
       completeTask(task.id);
       toast.success(`任务 "${task.title}" 已完成!`);
     },
@@ -86,11 +81,13 @@ export function TaskCard({ task }: TaskCardProps) {
               <Clock className="h-3 w-3" />
               <span>{task.pomodoroSpent}/{task.pomodoroEstimate} 番茄</span>
             </div>
-            <div className="flex items-center gap-1">
-              {task.tags.map(tag => (
-                <span key={tag} className="bg-secondary px-1.5 py-0.5 rounded text-[10px]">#{tag}</span>
-              ))}
-            </div>
+            {task.tags?.length > 0 && (
+              <div className="flex items-center gap-1">
+                {task.tags.map(tag => (
+                  <span key={tag} className="bg-secondary px-1.5 py-0.5 rounded text-[10px]">#{tag}</span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-1 sm:gap-2">

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Task, TimerState, TimerMode, TaskStatus } from '@/types/app-types';
+import { Task, TimerState, TimerMode, TaskStatus, Priority } from '@shared/types';
 import { api } from '@/lib/api-client';
 interface AppStore {
   tasks: Task[];
@@ -7,8 +7,7 @@ interface AppStore {
   error: string | null;
   timer: TimerState;
   fetchTasks: () => Promise<void>;
-  setTasks: (tasks: Task[]) => void;
-  addTask: (task: Omit<Task, 'id' | 'status' | 'pomodoroSpent' | 'tags' | 'createdAt'>) => Promise<void>;
+  addTask: (task: Omit<Task, 'id' | 'status' | 'pomodoroSpent' | 'tags' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   completeTask: (id: string) => void;
@@ -41,7 +40,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       console.error("Failed to fetch tasks", error);
     }
   },
-  setTasks: (tasks) => set({ tasks }),
   addTask: async (taskData) => {
     try {
       const newTask = await api<Task>('/api/tasks', {
@@ -65,7 +63,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       });
     } catch (error) {
       console.error("Failed to update task:", error);
-      set({ tasks: originalTasks }); // Rollback on error
+      set({ tasks: originalTasks });
     }
   },
   deleteTask: async (id: string) => {
@@ -73,11 +71,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => ({
       tasks: state.tasks.filter((t) => t.id !== id),
     }));
-     try {
+    try {
       await api(`/api/tasks/${id}`, { method: 'DELETE' });
     } catch (error) {
       console.error("Failed to delete task:", error);
-      set({ tasks: originalTasks }); // Rollback on error
+      set({ tasks: originalTasks });
     }
   },
   completeTask: (id) => {
