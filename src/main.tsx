@@ -14,6 +14,8 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import '@/index.css'
 import { HomePage } from '@/pages/HomePage'
 import { StatsPage } from '@/pages/StatsPage'
+import { VocabPage } from '@/pages/VocabPage'
+import { ListeningPage } from '@/pages/ListeningPage'
 const queryClient = new QueryClient();
 const router = createBrowserRouter([
   {
@@ -24,6 +26,16 @@ const router = createBrowserRouter([
   {
     path: "/stats",
     element: <StatsPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/vocab",
+    element: <VocabPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/listening",
+    element: <ListeningPage />,
     errorElement: <RouteErrorBoundary />,
   }
 ]);
