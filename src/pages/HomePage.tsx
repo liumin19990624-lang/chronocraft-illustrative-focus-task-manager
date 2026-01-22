@@ -5,7 +5,7 @@ import { TaskCard } from '@/components/task/TaskCard';
 import { CalendarWidget } from '@/components/dashboard/CalendarWidget';
 import { FocusOverlay } from '@/components/focus/FocusOverlay';
 import { useAppStore } from '@/store/use-app-store';
-import { Sparkles, Plus, Trophy, Flame, Inbox, Wallet, Book, Headphones, FileText, PenTool } from 'lucide-react';
+import { Sparkles, Plus, Trophy, Flame, Inbox, Wallet, Book, Headphones, FileText, PenTool, Brain, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { NewTaskDialog } from '@/components/task/NewTaskDialog';
@@ -37,6 +37,9 @@ export function HomePage() {
   const randomQuote = useMemo(() => {
     return ACADEMIC_QUOTES[Math.floor(Math.random() * ACADEMIC_QUOTES.length)];
   }, []);
+  const completedToday = useMemo(() => {
+    return tasks.filter(t => t.status === 2 && t.completedAt && new Date(t.completedAt).toDateString() === new Date().toDateString()).length;
+  }, [tasks]);
   const sortedTasks = useMemo(() => {
     let filtered = tasks;
     if (!showArchived) filtered = tasks.filter(t => !t.isArchived);
@@ -47,10 +50,10 @@ export function HomePage() {
     });
   }, [tasks, showArchived]);
   const quickAccess = [
-    { name: "词汇 词汇", icon: Book, color: "bg-orange-500", path: "/vocab", desc: "对���记忆术" },
-    { name: "听力 听力", icon: Headphones, color: "bg-blue-500", path: "/listening", desc: "精听悟道台" },
-    { name: "论文 论文", icon: FileText, color: "bg-emerald-500", path: "/papers", desc: "双���研习社" },
-    { name: "写作 写作", icon: PenTool, color: "bg-purple-500", path: "/writer", desc: "灵感演武场" },
+    { name: "词汇 对战", icon: Book, color: "bg-orange-500", path: "/vocab", desc: "对战记忆术" },
+    { name: "听力 研习", icon: Headphones, color: "bg-blue-500", path: "/listening", desc: "精听悟道台" },
+    { name: "论文 阅读", icon: FileText, color: "bg-emerald-500", path: "/papers", desc: "双栏研习社" },
+    { name: "写作 创作", icon: PenTool, color: "bg-purple-500", path: "/writer", desc: "灵感演武场" },
   ];
   if (!hasUser) return <RegisterDialog />;
   return (
@@ -73,7 +76,7 @@ export function HomePage() {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-4 bg-secondary/30 p-2 rounded-[2.5rem] border border-border/50">
+              <div className="flex items-center gap-4 bg-secondary/30 p-2 rounded-[2.5rem] border border-border/50 shadow-inner">
                 <div className="px-6 py-3 border-r border-border/50 flex items-center gap-3">
                   <Flame className="h-6 w-6 text-orange-500" />
                   <div>
@@ -99,25 +102,45 @@ export function HomePage() {
             </header>
             <section className="grid grid-cols-2 lg:grid-cols-4 gap-6">
               {quickAccess.map((item) => (
-                <Link key={item.path} to={item.path}>
-                  <Card className="group relative overflow-hidden p-6 rounded-[2.5rem] border-none bg-slate-100 dark:bg-slate-900 shadow-soft hover:scale-[1.02] transition-all cursor-pointer">
-                    <div className={cn("absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-10 group-hover:scale-150 transition-transform", item.color)} />
-                    <div className={cn("h-14 w-14 rounded-2xl flex items-center justify-center mb-4 text-white shadow-lg", item.color)}>
+                <Link key={item.path} to={item.path} className="block group">
+                  <Card className="relative overflow-hidden p-8 rounded-[2.5rem] border-none bg-slate-100 dark:bg-slate-900 shadow-soft group-hover:scale-[1.02] transition-all cursor-pointer h-full">
+                    <div className={cn("absolute top-0 right-0 w-32 h-32 -mr-12 -mt-12 rounded-full opacity-10 group-hover:scale-150 transition-transform", item.color)} />
+                    <div className={cn("h-16 w-16 rounded-3xl flex items-center justify-center mb-6 text-white shadow-lg", item.color)}>
                       <item.icon className="h-8 w-8" />
                     </div>
-                    <h3 className="text-xl font-bold font-display">{item.name}</h3>
+                    <h3 className="text-2xl font-bold font-display">{item.name}</h3>
                     <p className="text-xs text-muted-foreground font-medium mt-1 uppercase tracking-wider">{item.desc}</p>
                   </Card>
                 </Link>
               ))}
             </section>
+            {completedToday > 0 && (
+              <section>
+                <Link to="/stats">
+                  <Card className="p-8 rounded-[2.5rem] bg-slate-900 text-white border-none shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 group hover:bg-slate-800 transition-colors">
+                    <div className="flex items-center gap-6">
+                      <div className="h-16 w-16 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20">
+                        <Brain className="h-8 w-8 text-orange-400" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-display font-bold">今日修行小��</h2>
+                        <p className="text-slate-400 font-medium">今日已圆满 {completedToday} 项法诀，道心愈发坚固。</p>
+                      </div>
+                    </div>
+                    <Button variant="ghost" className="rounded-xl font-bold text-white hover:bg-white/10 gap-2">
+                      查看详细���盘 <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </Card>
+                </Link>
+              </section>
+            )}
             <main className="grid grid-cols-1 lg:grid-cols-12 gap-12">
               <section className="lg:col-span-8 space-y-10">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <h2 className="text-3xl font-display font-bold">待办任务 (Quests)</h2>
                     <Button variant="ghost" size="sm" onClick={toggleShowArchived} className="rounded-xl text-xs font-bold uppercase tracking-widest">
-                      {showArchived ? "��藏" : "查看归档"}
+                      {showArchived ? "隐藏" : "查看归档"}
                     </Button>
                   </div>
                   <NewTaskDialog>
