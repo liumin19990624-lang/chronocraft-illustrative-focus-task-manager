@@ -83,7 +83,7 @@ export function HomePage() {
   const hasUser = !!userNickname;
   useEffect(() => {
     fetchStats().then(() => { if (userNickname) fetchTasks(); });
-  }, [fetchTasks, fetchStats]);
+  }, [fetchTasks, fetchStats, userNickname]);
   const dailyGreeting = useMemo(() => {
     const hour = new Date().getHours();
     let timeGreet = "晨光熹微";

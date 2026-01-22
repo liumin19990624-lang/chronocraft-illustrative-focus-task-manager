@@ -1,10 +1,11 @@
 import { create } from 'zustand';
-import { Task, TimerState, TimerMode, TaskStatus, UserStats } from '@shared/types';
+import { Task, TimerState, TimerMode, UserStats, SocialPost, UserSettings } from '@shared/types';
 import { api } from '@/lib/api-client';
 import { isYesterday, isToday, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 interface AppStore {
   tasks: Task[];
+  socialPosts: SocialPost[];
   userStats: UserStats | null;
   isLoading: boolean;
   error: string | null;
@@ -13,6 +14,10 @@ interface AppStore {
   initUser: (nickname: string) => void;
   fetchTasks: () => Promise<void>;
   fetchStats: () => Promise<void>;
+  fetchPosts: () => Promise<void>;
+  createPost: (post: Partial<SocialPost>) => Promise<void>;
+  likePost: (id: string) => Promise<void>;
+  updateSettings: (settings: Partial<UserSettings>) => Promise<void>;
   addTask: (taskData: Partial<Task>) => Promise<void>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
@@ -29,8 +34,16 @@ interface AppStore {
 const POMODORO_TIME = 25 * 60;
 const SHORT_BREAK = 5 * 60;
 const LONG_BREAK = 15 * 60;
+const DEFAULT_SETTINGS: UserSettings = {
+  fontScale: 1.0,
+  themePreference: 'system',
+  privacyMode: false,
+  notificationsEnabled: true,
+  accentColor: '#88C0D0'
+};
 export const useAppStore = create<AppStore>((set, get) => ({
   tasks: [],
+  socialPosts: [],
   userStats: null,
   isLoading: true,
   error: null,
@@ -56,6 +69,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       totalFocusMinutes: 0,
       totalTasksCompleted: 0,
       unlockedAchievements: [],
+      settings: DEFAULT_SETTINGS,
     };
     localStorage.setItem('xian_user', JSON.stringify(newUser));
     set({ userStats: newUser });
@@ -63,7 +77,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   fetchTasks: async () => {
     const user = get().userStats;
     if (!user) return;
-    set({ isLoading: true, error: null });
+    set({ isLoading: true });
     try {
       const tasks = await api<Task[]>(`/api/tasks?userId=${user.id}`);
       set({ tasks, isLoading: false });
@@ -84,20 +98,56 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
     set({ isLoading: false });
   },
-  awardRewards: async (xpGain: number, coinGain: number) => {
+  fetchPosts: async () => {
+    try {
+      const posts = await api<SocialPost[]>('/api/community');
+      set({ socialPosts: posts });
+    } catch (e) { console.error(e); }
+  },
+  createPost: async (postData) => {
+    const user = get().userStats;
+    if (!user) return;
+    try {
+      const newPost = await api<SocialPost>('/api/community', {
+        method: 'POST',
+        body: JSON.stringify({ ...postData, userId: user.id, userName: user.nickname, userAvatar: user.avatar })
+      });
+      set(state => ({ socialPosts: [newPost, ...state.socialPosts] }));
+    } catch (e) { console.error(e); }
+  },
+  likePost: async (id) => {
+    set(state => ({
+      socialPosts: state.socialPosts.map(p => p.id === id ? { ...p, likes: p.likes + 1 } : p)
+    }));
+    try {
+      await api(`/api/community/${id}/like`, { method: 'POST' });
+    } catch (e) { get().fetchPosts(); }
+  },
+  updateSettings: async (updates) => {
+    const stats = get().userStats;
+    if (!stats) return;
+    const newSettings = { ...stats.settings, ...updates };
+    const updatedStats = { ...stats, settings: newSettings };
+    set({ userStats: updatedStats });
+    localStorage.setItem('xian_user', JSON.stringify(updatedStats));
+    try {
+      await api('/api/stats', { method: 'PATCH', body: JSON.stringify({ settings: newSettings }) });
+    } catch (e) { console.error(e); }
+  },
+  awardRewards: async (xpGain, coinGain) => {
     const stats = get().userStats;
     if (!stats) return;
     const newXP = stats.xp + xpGain;
     const currentLevel = stats.level;
     const newLevel = Math.floor(newXP / 1000) + 1;
     if (newLevel > currentLevel) {
-      toast.success(`境界突破��`, { description: `恭喜道友晋升至第 ${newLevel} 重天！` });
+      toast.success(`境界突破！`, { description: `恭喜道友��升至第 ${newLevel} 重天！` });
     }
-    const updatedStats = { 
-      ...stats, 
-      xp: newXP, 
-      level: newLevel, 
-      coins: stats.coins + coinGain 
+    const updatedStats = {
+      ...stats,
+      xp: newXP,
+      level: newLevel,
+      coins: stats.coins + coinGain
     };
     set({ userStats: updatedStats });
     localStorage.setItem('xian_user', JSON.stringify(updatedStats));
@@ -112,10 +162,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         body: JSON.stringify({ ...taskData, userId: user.id, status: 0 }),
       });
       set((state) => ({ tasks: [newTask, ...state.tasks] }));
-    } catch (error) {
-      console.error("Add task failed", error);
-      throw error;
-    }
+    } catch (error) { throw error; }
   },
   updateTask: async (id, updates) => {
     set((state) => ({
@@ -123,17 +170,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }));
     try {
       await api(`/api/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(updates) });
-    } catch (error) {
-      get().fetchTasks();
-    }
+    } catch (error) { get().fetchTasks(); }
   },
   deleteTask: async (id) => {
     set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
     try {
       await api(`/api/tasks/${id}`, { method: 'DELETE' });
-    } catch (error) {
-      get().fetchTasks();
-    }
+    } catch (error) { get().fetchTasks(); }
   },
   completeTask: (id) => {
     const task = get().tasks.find(t => t.id === id);

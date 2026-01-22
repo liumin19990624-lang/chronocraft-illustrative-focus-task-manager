@@ -1,4 +1,4 @@
-export type Priority = 1 | 2 | 3 | 4; // 1: 烈火 (Fire), 2: 流水 (Water), 3: 巨石 (Rock), 4: 清风 (Wind)
+export type Priority = 1 | 2 | 3 | 4; // 1: 烈火, 2: 流��, 3: 巨石, 4: 清风
 export type TaskStatus = 0 | 1 | 2 | 3; // 0: 未开始, 1: 进行中, 2: 已完成, 3: 已过期
 export type TaskType = 'reading' | 'listening' | 'writing' | 'other';
 export interface Task {
@@ -10,8 +10,8 @@ export interface Task {
   status: TaskStatus;
   type: TaskType;
   startDate?: string;
-  dueDate: string; // ISO string
-  dueTime: string; // HH:mm format
+  dueDate: string;
+  dueTime: string;
   pomodoroEstimate: number;
   pomodoroSpent: number;
   tags: string[];
@@ -19,6 +19,26 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
+}
+export type PostCategory = 'dynamics' | 'collaborative' | 'qna';
+export interface SocialPost {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  category: PostCategory;
+  content: string;
+  likes: number;
+  comments: number;
+  createdAt: string;
+  tags: string[];
+}
+export interface UserSettings {
+  fontScale: number; // 0.8 to 1.2
+  themePreference: 'light' | 'dark' | 'system';
+  privacyMode: boolean;
+  notificationsEnabled: boolean;
+  accentColor: string;
 }
 export interface UserStats {
   id: string;
@@ -32,6 +52,7 @@ export interface UserStats {
   totalTasksCompleted: number;
   lastActiveDate?: string;
   unlockedAchievements: string[];
+  settings: UserSettings;
 }
 export type TimerMode = 'focus' | 'short-break' | 'long-break';
 export interface TimerState {

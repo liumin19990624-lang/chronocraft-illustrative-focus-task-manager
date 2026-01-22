@@ -20,6 +20,8 @@ import { PaperReaderPage } from '@/pages/PaperReaderPage'
 import { WriterPage } from '@/pages/WriterPage'
 import { AchievementsPage } from '@/pages/AchievementsPage'
 import { ResourcesPage } from '@/pages/ResourcesPage'
+import { CommunityPage } from '@/pages/CommunityPage'
+import { SettingsPage } from '@/pages/SettingsPage'
 const queryClient = new QueryClient();
 const router = createBrowserRouter([
   {
@@ -61,16 +63,18 @@ const router = createBrowserRouter([
     path: "/resources",
     element: <ResourcesPage />,
     errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/community",
+    element: <CommunityPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/settings",
+    element: <SettingsPage />,
+    errorElement: <RouteErrorBoundary />,
   }
 ]);
-// Basic PWA Service Worker Registration
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(err => {
-      console.log('SW registration failed: ', err);
-    });
-  });
-}
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

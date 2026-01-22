@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { ok, bad, notFound, Env } from './core-utils';
 import { TaskEntity, StatsEntity } from './entities';
-import type { Task, UserStats } from '@shared/types';
+import type { Task, UserStats, SocialPost } from '@shared/types';
 export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
   app.get('/api/tasks', async (c) => {
     await TaskEntity.ensureSeed(c.env);
@@ -10,23 +10,8 @@ export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
   });
   app.post('/api/tasks', async (c) => {
     const body = await c.req.json<Task>();
-    if (!body.title) return bad(c, '标���是必填项');
-    const now = new Date().toISOString();
-    const taskData: Task = {
-      ...body,
-      id: body.id || crypto.randomUUID(),
-      priority: body.priority || 3,
-      status: body.status ?? 0,
-      type: body.type || 'other',
-      dueTime: body.dueTime || "09:00",
-      pomodoroEstimate: body.pomodoroEstimate || 1,
-      pomodoroSpent: 0,
-      tags: body.tags || [],
-      isArchived: false,
-      createdAt: now,
-      updatedAt: now
-    };
-    const task = await TaskEntity.create(c.env, taskData);
+    if (!body.title) return bad(c, '标题是必填项');
+    const task = await TaskEntity.create(c.env, { ...body, id: body.id || crypto.randomUUID(), createdAt: new Date().toISOString() });
     return ok(c, task);
   });
   app.patch('/api/tasks/:id', async (c) => {
@@ -34,19 +19,13 @@ export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
     const updates = await c.req.json<Partial<Task>>();
     const entity = new TaskEntity(c.env, id);
     if (!(await entity.exists())) return notFound(c, '任务不存在');
-    const task = await entity.mutate(s => ({
-      ...s,
-      ...updates,
-      updatedAt: new Date().toISOString(),
-      completedAt: updates.status === 2 ? new Date().toISOString() : s.completedAt
-    }));
+    const task = await entity.mutate(s => ({ ...s, ...updates, updatedAt: new Date().toISOString() }));
     return ok(c, task);
   });
   app.delete('/api/tasks/:id', async (c) => {
     const id = c.req.param('id');
     const existed = await TaskEntity.delete(c.env, id);
-    if (!existed) return notFound(c, '任务未找到');
-    return ok(c, { id });
+    return ok(c, { id, existed });
   });
   app.get('/api/stats', async (c) => {
     const entity = new StatsEntity(c.env, 'me');
@@ -58,5 +37,22 @@ export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
     const entity = new StatsEntity(c.env, 'me');
     const stats = await entity.mutate(s => ({ ...s, ...updates }));
     return ok(c, stats);
+  });
+  // Mock Community Data
+  const MOCK_POSTS: SocialPost[] = [
+    { id: 'p1', userId: 'u1', userName: '���术大圣', userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=monk', content: '今日参悟了 Transformer 架构，多头注意力机制妙不可言！', likes: 24, comments: 5, createdAt: new Date().toISOString(), category: 'dynamics', tags: ['学术'] },
+    { id: 'p2', userId: 'u2', userName: '炼语书生', userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=scholar', content: '坚持精听 30 天，终于���不看字幕的情况下听懂了 Nature 的学术报告。', likes: 42, comments: 12, createdAt: new Date().toISOString(), category: 'dynamics', tags: ['坚持'] }
+  ];
+  app.get('/api/community', async (c) => {
+    // In a real app, this would be a separate IndexedEntity
+    return ok(c, MOCK_POSTS);
+  });
+  app.post('/api/community', async (c) => {
+    const body = await c.req.json<SocialPost>();
+    const newPost = { ...body, id: crypto.randomUUID(), createdAt: new Date().toISOString(), likes: 0, comments: 0 };
+    return ok(c, newPost);
+  });
+  app.post('/api/community/:id/like', async (c) => {
+    return ok(c, { success: true });
   });
 };

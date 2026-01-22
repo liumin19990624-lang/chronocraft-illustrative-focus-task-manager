@@ -1,14 +1,17 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, Target, Trophy, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Target, Trophy, Users, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAppStore } from '@/store/use-app-store';
 export function MobileNav() {
+  const settings = useAppStore(s => s.userStats?.settings);
   const navItems = [
     { label: "大厅", icon: LayoutDashboard, path: "/", hasNotif: false },
-    { label: "任务", icon: Target, path: "/stats", hasNotif: true },
-    { label: "成就", icon: Trophy, path: "/achievements", hasNotif: true },
-    { label: "资料", icon: BookOpen, path: "/resources", hasNotif: false },
+    { label: "任务", icon: Target, path: "/stats", hasNotif: false },
+    { label: "广场", icon: Users, path: "/community", hasNotif: settings?.notificationsEnabled ?? false },
+    { label: "成就", icon: Trophy, path: "/achievements", hasNotif: false },
+    { label: "我的", icon: User, path: "/settings", hasNotif: false },
   ];
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background/70 backdrop-blur-2xl border-t border-border/50 px-4 py-3 pb-8">
@@ -18,7 +21,7 @@ export function MobileNav() {
             key={item.path}
             to={item.path}
             className={({ isActive }) => cn(
-              "relative flex flex-col items-center gap-1.5 px-4 py-2 rounded-2xl transition-all duration-300",
+              "relative flex flex-col items-center gap-1.5 px-3 py-2 rounded-2xl transition-all duration-300",
               isActive ? "text-primary scale-110" : "text-muted-foreground hover:text-foreground"
             )}
           >
