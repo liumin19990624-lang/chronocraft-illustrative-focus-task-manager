@@ -68,7 +68,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
     try {
       const tasks = await api<Task[]>(`/api/tasks?userId=${user.id}`);
       set({ tasks, isLoading: false });
-    } catch (e) { set({ error: "Failed to load tasks", isLoading: false }); }
+    } catch (e) {
+      set({ error: "Failed to load tasks", isLoading: false });
+    }
   },
   fetchStats: async () => {
     const localUserStr = localStorage.getItem('xian_user');
@@ -78,11 +80,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
     try {
       const remote = await api<UserStats>('/api/stats');
-      const merged = { ...localStats, ...remote, settings: { ...localStats?.settings, ...remote.settings } };
+      // Ensure focusHistory is initialized
+      const remoteStats = { ...remote, focusHistory: remote.focusHistory ?? {} };
+      const merged = { ...localStats, ...remoteStats, settings: { ...localStats?.settings, ...remoteStats.settings } };
       set({ userStats: merged as UserStats });
       localStorage.setItem('xian_user', JSON.stringify(merged));
     } catch (e) {
-      if (localStats) set({ userStats: localStats });
+      if (localStats) set({ userStats: { ...localStats, focusHistory: localStats.focusHistory ?? {} } });
     }
     set({ isLoading: false });
   },
@@ -118,7 +122,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
   awardRewards: async (xpGain, coinGain) => {
     const stats = get().userStats;
     if (!stats) return;
-    const today = new Date().toISOString().split('T')[0];
     const newXP = stats.xp + xpGain;
     const newLevel = Math.floor(newXP / 1000) + 1;
     const updated = { ...stats, xp: newXP, level: newLevel, coins: stats.coins + coinGain, lastActiveDate: new Date().toISOString() };
@@ -154,12 +157,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const today = new Date().toISOString().split('T')[0];
     const task = tasks.find(t => t.id === timer.activeTaskId);
     if (task) {
-      const newSpent = task.pomodoroSpent + 1;
-      await get().updateTask(task.id, { pomodoroSpent: newSpent });
+      await get().updateTask(task.id, { pomodoroSpent: task.pomodoroSpent + 1 });
       const spiritBonus = Math.floor(timer.spiritHealth / 10);
       await get().awardRewards(100 + spiritBonus * 10, 20 + spiritBonus);
       if (userStats) {
-        const history = { ...userStats.focusHistory };
+        const history = { ...(userStats.focusHistory ?? {}) };
         history[today] = (history[today] || 0) + 25;
         const updatedStats = { ...userStats, totalFocusMinutes: userStats.totalFocusMinutes + 25, focusHistory: history };
         set({ userStats: updatedStats });
@@ -172,7 +174,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   checkAchievements: () => {
     const { userStats } = get();
     if (!userStats) return;
-    const currentUnlocked = userStats.unlockedAchievements;
+    const currentUnlocked = userStats.unlockedAchievements ?? [];
     const newUnlocks: string[] = [];
     if (userStats.level >= 5 && !currentUnlocked.includes('a2')) newUnlocks.push('a2');
     if (userStats.totalTasksCompleted >= 10 && !currentUnlocked.includes('a3')) newUnlocks.push('a3');
@@ -190,7 +192,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
   requestAiAssistant: async (text, type, role = 'mentor') => {
     set({ isStreaming: true, streamingContent: '' });
-    const responseContent = MOCK_AI_RESPONSES[type] || "笔灵元���不足，未能给出回应。";
+    const responseContent = MOCK_AI_RESPONSES[type] || "笔灵元气不足，未能给出回应。";
     return new Promise((resolve) => {
       let index = 0;
       const interval = setInterval(() => {
@@ -207,7 +209,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
             originalText: text,
             versions: type === 'modify' ? [
               responseContent,
-              "在���术语境下，该论述可进一步精炼为：研究表明该机制具有显著的全局建模优势。",
+              "在学��语境下，该论述可进一步精炼为：研究表明该��制具有显著的全局建模优势。",
               "更为地道的表达方式是：The proposed mechanism exhibits superior global modeling capabilities in academic contexts."
             ] : undefined,
             metadata: {
@@ -231,16 +233,18 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ isCheckingIn: true });
     try {
       const res = await api<UserStats>('/api/checkin', { method: 'POST' });
-      set({ userStats: res });
-      localStorage.setItem('xian_user', JSON.stringify(res));
-      const nicknames = ["卷王", "肝帝", "学神", "道祖"];
-      const titles = ["今日宜：生吞ArXiv文献", "今日忌：道心破碎", "今日宜：御��润色", "今日忌：摸鱼乱神"];
-      const randomFortune = `${nicknames[Math.floor(Math.random() * nicknames.length)]}！${titles[Math.floor(Math.random() * titles.length)]}。修行��度加速度，神识海阔天空。`;
+      const statsWithHistory = { ...res, focusHistory: res.focusHistory ?? {} };
+      set({ userStats: statsWithHistory });
+      localStorage.setItem('xian_user', JSON.stringify(statsWithHistory));
+      const fortuneOptions = ["今日宜：生吞ArXiv文献", "今日宜：御气润色", "今日忌：道心破碎", "今日忌：摸鱼乱神"];
+      const randomFortune = `${stats.nickname}道友！${fortuneOptions[Math.floor(Math.random() * fortuneOptions.length)]}。`;
       set(s => ({ userStats: s.userStats ? { ...s.userStats, dailyFortune: randomFortune } : null }));
-      const coinsGained = res.coins - stats.coins;
-      toast.success("掌门令准！", { description: `签到成功！获得 ${coinsGained} 灵石` });
-    } catch (e) { toast.error("法阵波动，签到失败"); }
-    finally { set({ isCheckingIn: false }); }
+      toast.success("掌门令准！", { description: "签到成功！" });
+    } catch (e) {
+      toast.error("法阵波动，签到失败");
+    } finally {
+      set({ isCheckingIn: false });
+    }
   },
   toggleShowArchived: () => set(s => ({ showArchived: !s.showArchived })),
   startFocus: (taskId) => set(s => ({ timer: { ...s.timer, activeTaskId: taskId, isRunning: true, isPaused: false, mode: 'focus', timeLeft: POMODORO_TIME, isDistracted: false, spiritHealth: 100 } })),
