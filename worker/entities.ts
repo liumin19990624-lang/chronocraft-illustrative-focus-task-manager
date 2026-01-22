@@ -34,6 +34,8 @@ export class StatsEntity extends Entity<UserStats> {
     totalTasksCompleted: 0,
     unlockedAchievements: [],
     checkinHistory: [],
+    focusHistory: {},
+    lastActiveDate: "",
     lastCheckinDate: undefined,
     settings: {
       fontScale: 1.0,

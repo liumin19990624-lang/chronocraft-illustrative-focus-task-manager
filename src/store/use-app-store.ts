@@ -11,7 +11,6 @@ interface AppStore {
   error: string | null;
   timer: TimerState;
   showArchived: boolean;
-  // AI Streaming state
   isStreaming: boolean;
   isCheckingIn: boolean;
   streamingContent: string;
@@ -56,8 +55,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   initUser: (nickname: string) => {
     const newUser: UserStats = {
       id: crypto.randomUUID(), nickname, avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${nickname}`,
-      level: 1, xp: 0, coins: 0, streak: 0, totalFocusMinutes: 0, totalTasksCompleted: 0, unlockedAchievements: [], 
-      checkinHistory: [], settings: DEFAULT_SETTINGS,
+      level: 1, xp: 0, coins: 0, streak: 0, totalFocusMinutes: 0, totalTasksCompleted: 0, unlockedAchievements: [],
+      checkinHistory: [], focusHistory: {}, lastActiveDate: new Date().toISOString(), settings: DEFAULT_SETTINGS,
     };
     localStorage.setItem('xian_user', JSON.stringify(newUser));
     set({ userStats: newUser });
@@ -119,12 +118,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
   awardRewards: async (xpGain, coinGain) => {
     const stats = get().userStats;
     if (!stats) return;
+    const today = new Date().toISOString().split('T')[0];
     const newXP = stats.xp + xpGain;
     const newLevel = Math.floor(newXP / 1000) + 1;
-    const updated = { ...stats, xp: newXP, level: newLevel, coins: stats.coins + coinGain };
+    const updated = { ...stats, xp: newXP, level: newLevel, coins: stats.coins + coinGain, lastActiveDate: new Date().toISOString() };
     set({ userStats: updated });
     localStorage.setItem('xian_user', JSON.stringify(updated));
-    api('/api/stats', { method: 'PATCH', body: JSON.stringify({ xp: updated.xp, level: updated.level, coins: updated.coins }) });
+    api('/api/stats', { method: 'PATCH', body: JSON.stringify({ xp: updated.xp, level: updated.level, coins: updated.coins, lastActiveDate: updated.lastActiveDate }) });
     get().checkAchievements();
   },
   addTask: async (taskData) => {
@@ -144,13 +144,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
   completeTask: (id) => {
     const task = get().tasks.find(t => t.id === id);
     if (!task || task.status === 2) return;
-    get().updateTask(id, { status: 2, completedAt: new Date().toISOString() });
+    get().updateTask(id, { status: 2, completedAt: new Date().toISOString(), isArchived: true });
     get().awardRewards(150, 50);
     set(s => ({ userStats: s.userStats ? { ...s.userStats, totalTasksCompleted: s.userStats.totalTasksCompleted + 1 } : null }));
   },
   completePomodoro: async () => {
     const { timer, tasks, userStats } = get();
     if (!timer.activeTaskId) return;
+    const today = new Date().toISOString().split('T')[0];
     const task = tasks.find(t => t.id === timer.activeTaskId);
     if (task) {
       const newSpent = task.pomodoroSpent + 1;
@@ -158,9 +159,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
       const spiritBonus = Math.floor(timer.spiritHealth / 10);
       await get().awardRewards(100 + spiritBonus * 10, 20 + spiritBonus);
       if (userStats) {
-        const updatedStats = { ...userStats, totalFocusMinutes: userStats.totalFocusMinutes + 25 };
+        const history = { ...userStats.focusHistory };
+        history[today] = (history[today] || 0) + 25;
+        const updatedStats = { ...userStats, totalFocusMinutes: userStats.totalFocusMinutes + 25, focusHistory: history };
         set({ userStats: updatedStats });
         localStorage.setItem('xian_user', JSON.stringify(updatedStats));
+        api('/api/stats', { method: 'PATCH', body: JSON.stringify({ focusHistory: history, totalFocusMinutes: updatedStats.totalFocusMinutes }) });
       }
     }
     get().stopFocus();
@@ -172,6 +176,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const newUnlocks: string[] = [];
     if (userStats.level >= 5 && !currentUnlocked.includes('a2')) newUnlocks.push('a2');
     if (userStats.totalTasksCompleted >= 10 && !currentUnlocked.includes('a3')) newUnlocks.push('a3');
+    if (userStats.streak >= 7 && !currentUnlocked.includes('a1')) newUnlocks.push('a1');
+    if (userStats.totalFocusMinutes >= 1500 && !currentUnlocked.includes('a5')) newUnlocks.push('a5');
     if (newUnlocks.length > 0) {
       const updated = { ...userStats, unlockedAchievements: [...currentUnlocked, ...newUnlocks] };
       set({ userStats: updated });
@@ -184,8 +190,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
   requestAiAssistant: async (text, type, role = 'mentor') => {
     set({ isStreaming: true, streamingContent: '' });
-    const responseContent = MOCK_AI_RESPONSES[type] || "笔灵元气不足，���能给出回应。";
-    // Simulate streaming
+    const responseContent = MOCK_AI_RESPONSES[type] || "笔灵元���不足，未能给出回应。";
     return new Promise((resolve) => {
       let index = 0;
       const interval = setInterval(() => {
@@ -202,16 +207,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
             originalText: text,
             versions: type === 'modify' ? [
               responseContent,
-              "在���学术语境下，该论述可进一步精炼为：研究表明该机制具有显著的全局建模优势。",
+              "在���术语境下，该论述可进一步精炼为：研究表明该机制具有显著的全局建模优势。",
               "更为地道的表达方式是：The proposed mechanism exhibits superior global modeling capabilities in academic contexts."
             ] : undefined,
             metadata: {
-              score: { 
-                grammar: 92, 
-                logic: 95, 
-                originality: 98,
-                innovation: type === 'modify' ? 88 : undefined
-              },
+              score: { grammar: 92, logic: 95, originality: 98, innovation: type === 'modify' ? 88 : undefined },
               suggestions: ["逻辑严密", "原创度高"]
             }
           };
@@ -231,31 +231,16 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ isCheckingIn: true });
     try {
       const res = await api<UserStats>('/api/checkin', { method: 'POST' });
-      
-      // Update local state immediately
       set({ userStats: res });
       localStorage.setItem('xian_user', JSON.stringify(res));
-      
-      // Generate a humorous AI fortune
       const nicknames = ["卷王", "肝帝", "学神", "道祖"];
-      const titles = ["今日宜：生吞ArXiv文��", "今日忌：道心破碎", "今日宜：御笔润色", "今日忌：摸鱼乱神"];
-      const randomFortune = `${nicknames[Math.floor(Math.random() * nicknames.length)]}！${titles[Math.floor(Math.random() * titles.length)]}。修行进度加��，神识海阔天空。`;
-      
-      // Update fortune in store
-      set(s => ({ 
-        userStats: s.userStats ? { ...s.userStats, dailyFortune: randomFortune } : null 
-      }));
-
-      // Reward UI
+      const titles = ["今日宜：生吞ArXiv文献", "今日忌：道心破碎", "今日宜：御��润色", "今日忌：摸鱼乱神"];
+      const randomFortune = `${nicknames[Math.floor(Math.random() * nicknames.length)]}！${titles[Math.floor(Math.random() * titles.length)]}。修行��度加速度，神识海阔天空。`;
+      set(s => ({ userStats: s.userStats ? { ...s.userStats, dailyFortune: randomFortune } : null }));
       const coinsGained = res.coins - stats.coins;
-      toast.success("掌门令准！", { 
-        description: `��到成功！获得 ${coinsGained} 灵石 (连胜倍率: ${(1 + res.streak * 0.1).toFixed(1)}x)` 
-      });
-    } catch (e) {
-      toast.error("法阵波动，签到失败");
-    } finally {
-      set({ isCheckingIn: false });
-    }
+      toast.success("掌门令准！", { description: `签到成功！获得 ${coinsGained} 灵石` });
+    } catch (e) { toast.error("法阵波动，签到失败"); }
+    finally { set({ isCheckingIn: false }); }
   },
   toggleShowArchived: () => set(s => ({ showArchived: !s.showArchived })),
   startFocus: (taskId) => set(s => ({ timer: { ...s.timer, activeTaskId: taskId, isRunning: true, isPaused: false, mode: 'focus', timeLeft: POMODORO_TIME, isDistracted: false, spiritHealth: 100 } })),
@@ -263,13 +248,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   tick: () => {
     const { timer } = get();
     if (!timer.isRunning || timer.isPaused || timer.timeLeft <= 0) return;
-    set(s => ({
-      timer: {
-        ...s.timer,
-        timeLeft: s.timer.timeLeft - 1,
-        spiritHealth: s.timer.mode !== 'focus' ? Math.min(100, s.timer.spiritHealth + 0.1) : s.timer.spiritHealth
-      }
-    }));
+    set(s => ({ timer: { ...s.timer, timeLeft: s.timer.timeLeft - 1, spiritHealth: s.timer.mode !== 'focus' ? Math.min(100, s.timer.spiritHealth + 0.1) : s.timer.spiritHealth } }));
   },
   drainSpirit: (amount) => set(s => ({ timer: { ...s.timer, spiritHealth: Math.max(0, s.timer.spiritHealth - amount) } })),
   setDistracted: (distracted) => set(s => ({ timer: { ...s.timer, isDistracted: distracted, isPaused: distracted, isRunning: !distracted } })),
