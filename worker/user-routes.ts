@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { ok, bad, notFound, Env, Entity, EntityStatics } from './core-utils';
+import { ok, bad, notFound, Env } from './core-utils';
 import { TaskEntity, StatsEntity } from './entities';
 import type { Task, UserStats } from '@shared/types';
 export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
@@ -9,13 +9,13 @@ export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
   });
   app.post('/api/tasks', async (c) => {
     const body = await c.req.json<Task>();
-    if (!body.title) return bad(c, '标题是必填项');
+    if (!body.title) return bad(c, '标���是必填项');
     const now = new Date().toISOString();
     const taskData: Task = {
       ...body,
       id: body.id || crypto.randomUUID(),
       priority: body.priority || 3,
-      status: body.status || 'todo',
+      status: body.status ?? 0,
       type: body.type || 'other',
       dueTime: body.dueTime || "09:00",
       pomodoroEstimate: body.pomodoroEstimate || 1,
@@ -37,7 +37,7 @@ export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
       ...s,
       ...updates,
       updatedAt: new Date().toISOString(),
-      completedAt: updates.status === 'completed' ? new Date().toISOString() : s.completedAt
+      completedAt: updates.status === 2 ? new Date().toISOString() : s.completedAt
     }));
     return ok(c, task);
   });
@@ -47,7 +47,6 @@ export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
     if (!existed) return notFound(c, '任务未找到');
     return ok(c, { id });
   });
-  // User Stats Endpoints
   app.get('/api/stats', async (c) => {
     const entity = new StatsEntity(c.env, 'me');
     const stats = await entity.getState();

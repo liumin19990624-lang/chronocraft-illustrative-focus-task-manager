@@ -5,12 +5,11 @@ import { TaskCard } from '@/components/task/TaskCard';
 import { CalendarWidget } from '@/components/dashboard/CalendarWidget';
 import { FocusOverlay } from '@/components/focus/FocusOverlay';
 import { useAppStore } from '@/store/use-app-store';
-import { Sparkles, Plus, Trophy, Flame, Inbox, ScrollText, Wallet } from 'lucide-react';
+import { Sparkles, Plus, Trophy, Flame, Inbox, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NewTaskDialog } from '@/components/task/NewTaskDialog';
 import { RegisterDialog } from '@/components/registration/RegisterDialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useShallow } from 'zustand/react/shallow';
@@ -22,7 +21,12 @@ export function HomePage() {
   const activeTaskId = useAppStore(s => s.timer.activeTaskId);
   const showArchived = useAppStore(s => s.showArchived);
   const toggleShowArchived = useAppStore(s => s.toggleShowArchived);
-  const userStats = useAppStore(s => s.userStats);
+  // Zero-Tolerance Zustand Selectors
+  const userNickname = useAppStore(s => s.userStats?.nickname);
+  const userLevel = useAppStore(s => s.userStats?.level ?? 1);
+  const userCoins = useAppStore(s => s.userStats?.coins ?? 0);
+  const userStreak = useAppStore(s => s.userStats?.streak ?? 0);
+  const hasUser = !!userNickname;
   useEffect(() => {
     fetchStats().then(() => fetchTasks());
   }, [fetchTasks, fetchStats]);
@@ -35,7 +39,7 @@ export function HomePage() {
       return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
     });
   }, [tasks, showArchived]);
-  if (!userStats) return <RegisterDialog />;
+  if (!hasUser) return <RegisterDialog />;
   return (
     <AppLayout className="bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12">
@@ -48,9 +52,9 @@ export function HomePage() {
                 <Sparkles className="h-10 w-10 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-5xl font-display font-bold tracking-tight">���途任务</h1>
+                <h1 className="text-5xl font-display font-bold tracking-tight">仙途任务</h1>
                 <p className="text-muted-foreground font-medium text-lg mt-1">
-                  道友 <span className="text-foreground font-bold">{userStats.nickname}</span>，今日宜潜心修道。
+                  道友 <span className="text-foreground font-bold">{userNickname}</span>，今日宜潜心修道。
                 </p>
               </div>
             </div>
@@ -59,21 +63,21 @@ export function HomePage() {
                 <Flame className="h-6 w-6 text-orange-500" />
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">道龄</p>
-                  <p className="font-display font-bold text-xl">{userStats.streak} 天</p>
+                  <p className="font-display font-bold text-xl">{userStreak} 天</p>
                 </div>
               </div>
               <div className="px-6 py-3 border-r border-border/50 flex items-center gap-3">
                 <Trophy className="h-6 w-6 text-yellow-500" />
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">境界</p>
-                  <p className="font-display font-bold text-xl">第 {userStats.level} 重</p>
+                  <p className="font-display font-bold text-xl">第 {userLevel} 重</p>
                 </div>
               </div>
               <div className="px-6 py-3 flex items-center gap-3">
                 <Wallet className="h-6 w-6 text-emerald-500" />
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">灵石</p>
-                  <p className="font-display font-bold text-xl">{userStats.coins}</p>
+                  <p className="font-display font-bold text-xl">{userCoins}</p>
                 </div>
               </div>
             </div>
@@ -82,9 +86,9 @@ export function HomePage() {
             <section className="lg:col-span-8 space-y-10">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <h2 className="text-3xl font-display font-bold">法诀卡组</h2>
+                  <h2 className="text-3xl font-display font-bold">法诀���组</h2>
                   <Button variant="ghost" size="sm" onClick={toggleShowArchived} className="rounded-xl text-xs font-bold uppercase tracking-widest">
-                    {showArchived ? "隐藏封���" : "查看封存"}
+                    {showArchived ? "��藏封存" : "查看封存"}
                   </Button>
                 </div>
                 <NewTaskDialog>
@@ -108,17 +112,6 @@ export function HomePage() {
             </section>
             <aside className="lg:col-span-4 space-y-12">
               <CalendarWidget />
-              <div className="p-10 bg-gradient-to-br from-primary to-primary/80 rounded-5xl text-primary-foreground space-y-6 shadow-2xl relative overflow-hidden group">
-                <div className="absolute -top-10 -right-10 h-40 w-40 bg-white/10 rounded-full blur-3xl" />
-                <div className="space-y-2">
-                  <div className="bg-white/20 inline-block px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-widest">宗门秘籍</div>
-                  <h3 className="text-3xl font-display font-bold">潜修之道</h3>
-                </div>
-                <p className="text-primary-foreground/80 leading-relaxed italic">
-                  “修道者，需守本心。每一息���注，皆是通往长生之基石。切莫为外物所扰，方能修得圆满。”
-                </p>
-                <Button variant="secondary" className="w-full h-14 rounded-2xl font-bold text-lg shadow-xl">悟道手册</Button>
-              </div>
             </aside>
           </main>
         </div>

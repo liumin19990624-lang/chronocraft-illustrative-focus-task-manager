@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, BarChart3, Settings, Sparkles, Flame, Trophy } from "lucide-react";
+import { LayoutDashboard, BarChart3, Sparkles, Flame, Trophy } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -16,14 +16,14 @@ import { useAppStore } from "@/store/use-app-store";
 import { cn } from "@/lib/utils";
 export function AppSidebar(): JSX.Element {
   const location = useLocation();
-  const level = useAppStore(s => s.userStats.level);
-  const xp = useAppStore(s => s.userStats.xp);
-  const streak = useAppStore(s => s.userStats.streak);
-  const nextLevelXP = level * 1000;
+  // Zero-Tolerance selectors
+  const level = useAppStore(s => s.userStats?.level ?? 1);
+  const xp = useAppStore(s => s.userStats?.xp ?? 0);
+  const streak = useAppStore(s => s.userStats?.streak ?? 0);
   const progress = (xp % 1000) / 10;
   const menuItems = [
-    { title: "���作台", icon: LayoutDashboard, path: "/" },
-    { title: "时间视野", icon: BarChart3, path: "/stats" },
+    { title: "工作台", icon: LayoutDashboard, path: "/" },
+    { title: "时��视野", icon: BarChart3, path: "/stats" },
   ];
   return (
     <Sidebar className="border-r border-border/50">
@@ -40,8 +40,8 @@ export function AppSidebar(): JSX.Element {
           <SidebarMenu>
             {menuItems.map((item) => (
               <SidebarMenuItem key={item.path}>
-                <SidebarMenuButton 
-                  asChild 
+                <SidebarMenuButton
+                  asChild
                   isActive={location.pathname === item.path}
                   className={cn(
                     "rounded-xl h-12 px-4 transition-all",

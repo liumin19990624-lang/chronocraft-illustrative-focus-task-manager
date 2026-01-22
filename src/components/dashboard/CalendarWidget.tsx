@@ -19,14 +19,14 @@ export function CalendarWidget() {
   }, [date, tasks]);
   const stats = useMemo(() => {
     const total = tasksForSelectedDay.length;
-    const completed = tasksForSelectedDay.filter(t => t.status === 'completed').length;
+    const completed = tasksForSelectedDay.filter(t => t.status === 2).length;
     return { total, completed, pending: total - completed };
   }, [tasksForSelectedDay]);
   const modifiers = useMemo(() => {
     return {
-      completed: tasks.filter(t => t.status === 'completed').map(t => parseISO(t.dueDate)),
-      overdue: tasks.filter(t => t.status !== 'completed' && isPast(parseISO(t.dueDate)) && !isToday(parseISO(t.dueDate))).map(t => parseISO(t.dueDate)),
-      pending: tasks.filter(t => t.status !== 'completed' && !isPast(parseISO(t.dueDate))).map(t => parseISO(t.dueDate)),
+      completed: tasks.filter(t => t.status === 2).map(t => parseISO(t.dueDate)),
+      overdue: tasks.filter(t => t.status !== 2 && isPast(parseISO(t.dueDate)) && !isToday(parseISO(t.dueDate))).map(t => parseISO(t.dueDate)),
+      pending: tasks.filter(t => t.status !== 2 && !isPast(parseISO(t.dueDate))).map(t => parseISO(t.dueDate)),
     };
   }, [tasks]);
   const modifierStyles = useMemo(() => ({
@@ -75,7 +75,7 @@ export function CalendarWidget() {
                 <p className="text-xl font-display font-bold mt-1">当日蓝图</p>
               </div>
               <Badge variant="outline" className="rounded-xl px-3 py-1 font-bold text-primary border-primary/20">
-                {stats.completed}/{stats.total} 完成
+                {stats.completed}/{stats.total} 完��
               </Badge>
             </div>
             <ScrollArea className="h-[220px] pr-4">
@@ -84,7 +84,7 @@ export function CalendarWidget() {
                   <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
                     <LayoutList className="h-10 w-10 text-muted-foreground/20" />
                     <p className="text-base text-muted-foreground font-display italic">
-                      ��今日无蓝图，正是休憩时”
+                      “今日无蓝图，正是休憩时���
                     </p>
                   </div>
                 ) : (
@@ -93,12 +93,12 @@ export function CalendarWidget() {
                       <div className="flex items-center gap-4">
                         <div className={cn(
                           "w-2 h-8 rounded-full",
-                          t.status === 'completed' ? 'bg-green-500' : 'bg-primary'
+                          t.status === 2 ? 'bg-green-500' : 'bg-primary'
                         )} />
                         <div>
                           <p className={cn(
                             "text-sm font-bold line-clamp-1",
-                            t.status === 'completed' && 'line-through text-muted-foreground/60'
+                            t.status === 2 && 'line-through text-muted-foreground/60'
                           )}>
                             {t.title}
                           </p>

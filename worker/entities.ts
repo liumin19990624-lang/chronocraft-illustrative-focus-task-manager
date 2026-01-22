@@ -5,9 +5,10 @@ export class TaskEntity extends IndexedEntity<Task> {
   static readonly indexName = "tasks";
   static readonly initialState: Task = {
     id: "",
+    userId: "",
     title: "",
     priority: 3,
-    status: 'todo',
+    status: 0,
     type: 'other',
     dueDate: new Date().toISOString(),
     dueTime: "09:00",
@@ -19,13 +20,15 @@ export class TaskEntity extends IndexedEntity<Task> {
     updatedAt: new Date().toISOString(),
   };
 }
-
 export class StatsEntity extends Entity<UserStats> {
   static readonly entityName = "stats";
   static readonly initialState: UserStats = {
     id: 'me',
+    nickname: '',
+    avatar: '',
     level: 1,
     xp: 0,
+    coins: 0,
     streak: 0,
     totalFocusMinutes: 0,
     totalTasksCompleted: 0,
