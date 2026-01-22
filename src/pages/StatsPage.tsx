@@ -70,7 +70,7 @@ export function StatsPage() {
         <Card className="lg:col-span-8 border-none shadow-soft rounded-[3rem] p-8 bg-card">
           <CardHeader className="px-0 pt-0 pb-8"><CardTitle className="text-2xl font-display font-bold text-foreground">近七日专注���势</CardTitle></CardHeader>
           <div className="h-[400px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={300} minWidth={300}>
               <AreaChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12, fontWeight: 700}} dy={10} />
@@ -83,8 +83,8 @@ export function StatsPage() {
         </Card>
         <Card className="lg:col-span-4 border-none shadow-soft rounded-[3rem] p-8 flex flex-col bg-card">
           <CardHeader className="px-0 pt-0 pb-8"><CardTitle className="text-2xl font-display font-bold text-foreground">修为分布</CardTitle></CardHeader>
-          <div className="flex-1 min-h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-[350px] w-full relative">
+            <ResponsiveContainer width="100%" height="100%" minHeight={300} minWidth={300}>
               <PieChart>
                 <Pie data={distributionData} innerRadius={60} outerRadius={100} paddingAngle={5} dataKey="value">
                   {distributionData.map((_, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
