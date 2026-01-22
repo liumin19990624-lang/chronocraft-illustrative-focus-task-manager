@@ -141,7 +141,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const currentLevel = stats.level;
     const newLevel = Math.floor(newXP / 1000) + 1;
     if (newLevel > currentLevel) {
-      toast.success(`境界突破！`, { description: `恭喜道友��升至第 ${newLevel} 重天！` });
+      toast.success(`境界突破！`, { description: `恭喜道���晋升至第 ${newLevel} 重天！` });
     }
     const updatedStats = {
       ...stats,
@@ -156,13 +156,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
   addTask: async (taskData) => {
     const user = get().userStats;
     if (!user) return;
-    try {
-      const newTask = await api<Task>('/api/tasks', {
-        method: 'POST',
-        body: JSON.stringify({ ...taskData, userId: user.id, status: 0 }),
-      });
-      set((state) => ({ tasks: [newTask, ...state.tasks] }));
-    } catch (error) { throw error; }
+    const newTask = await api<Task>('/api/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ ...taskData, userId: user.id, status: 0 }),
+    });
+    set((state) => ({ tasks: [newTask, ...state.tasks] }));
   },
   updateTask: async (id, updates) => {
     set((state) => ({

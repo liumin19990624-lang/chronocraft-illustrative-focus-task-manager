@@ -38,9 +38,9 @@ function HallParticles() {
       particles.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5,
-        size: Math.random() * 3 + 1,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: (Math.random() - 0.5) * 0.4,
+        size: Math.random() * 2 + 1,
         color: colors[Math.floor(Math.random() * colors.length)]
       });
     }
@@ -54,7 +54,7 @@ function HallParticles() {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
-        ctx.globalAlpha = 0.2;
+        ctx.globalAlpha = 0.15;
         ctx.fill();
       });
       animationFrameId = requestAnimationFrame(animate);
@@ -65,7 +65,7 @@ function HallParticles() {
       cancelAnimationFrame(animationFrameId);
     };
   }, []);
-  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0 opacity-50 hall-particles" />;
+  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0 opacity-40 hall-particles" />;
 }
 export function HomePage() {
   const tasks = useAppStore(useShallow(s => s.tasks));
@@ -90,7 +90,7 @@ export function HomePage() {
     const randomQuote = ACADEMIC_QUOTES[Math.floor(Math.random() * ACADEMIC_QUOTES.length)];
     if (hour >= 12 && hour < 18) timeGreet = "午后小憩";
     if (hour >= 18) timeGreet = "月下研读";
-    return `${timeGreet}，${userNickname}道友。今日你已处在第 ${userLevel} 重境界，神识清明，宜修法。${randomQuote}`;
+    return `${timeGreet}，${userNickname}道友。今日你已处在第 ${userLevel} 重境界，���识清明，宜修法。${randomQuote}`;
   }, [userNickname, userLevel]);
   const sortedTasks = useMemo(() => {
     let filtered = tasks;
@@ -102,10 +102,10 @@ export function HomePage() {
     });
   }, [tasks, showArchived]);
   const quickAccess = [
-    { name: "词汇 对战", icon: Book, color: "bg-orange-500", path: "/vocab", desc: "对战记忆术" },
-    { name: "听力 研习", icon: Headphones, color: "bg-blue-500", path: "/listening", desc: "精听悟道��" },
-    { name: "论文 阅读", icon: FileText, color: "bg-emerald-500", path: "/papers", desc: "双栏研习社" },
-    { name: "写作 ��作", icon: PenTool, color: "bg-purple-500", path: "/writer", desc: "灵感演武场" },
+    { name: "词汇 对战", icon: Book, color: "bg-orange-500", path: "/vocab", desc: "对战���忆术" },
+    { name: "听力 研习", icon: Headphones, color: "bg-blue-500", path: "/listening", desc: "精听悟道方" },
+    { name: "论文 阅读", icon: FileText, color: "bg-emerald-500", path: "/papers", desc: "双���研习社" },
+    { name: "写作 创作", icon: PenTool, color: "bg-purple-500", path: "/writer", desc: "灵感演武场" },
   ];
   if (!hasUser) return <RegisterDialog />;
   return (
@@ -167,7 +167,7 @@ export function HomePage() {
               <section className="lg:col-span-8 space-y-10">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <h2 className="text-3xl font-display font-bold">待办任��� (Quests)</h2>
+                    <h2 className="text-3xl font-display font-bold">待办任务 (Quests)</h2>
                     <Button variant="ghost" size="sm" onClick={toggleShowArchived} className="rounded-xl text-xs font-bold uppercase tracking-widest">
                       {showArchived ? "隐藏" : "查看归档"}
                     </Button>

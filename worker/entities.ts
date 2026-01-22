@@ -32,6 +32,13 @@ export class StatsEntity extends Entity<UserStats> {
     streak: 0,
     totalFocusMinutes: 0,
     totalTasksCompleted: 0,
-    unlockedAchievements: []
+    unlockedAchievements: [],
+    settings: {
+      fontScale: 1.0,
+      themePreference: 'system',
+      privacyMode: false,
+      notificationsEnabled: true,
+      accentColor: '#88C0D0'
+    }
   };
 }

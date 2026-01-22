@@ -16,12 +16,12 @@ import { CalendarIcon, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Priority } from '@shared/types';
 const taskSchema = z.object({
-  title: z.string().min(2, '���题至少包含2个字'),
+  title: z.string().min(2, '标题至少包含2个字'),
   priority: z.number().min(1).max(4),
   type: z.enum(['reading', 'listening', 'writing', 'other'] as const),
   dueDate: z.date(),
   startDate: z.date().optional(),
-  dueTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, '格式��为 HH:mm'),
+  dueTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, '格式应为 HH:mm'),
   pomodoroEstimate: z.number().int().min(1, '至少1个番茄'),
 });
 type TaskFormData = z.infer<typeof taskSchema>;
@@ -35,10 +35,10 @@ export function NewTaskDialog({ children }: { children: React.ReactNode }) {
   const onSubmit = async (data: TaskFormData) => {
     try {
       await addTask({ ...data, priority: data.priority as Priority, dueDate: data.dueDate.toISOString(), startDate: data.startDate?.toISOString() });
-      toast.success("法诀录入��功！");
+      toast.success("法诀���入成功！");
       reset();
       setOpen(false);
-    } catch (err) { toast.error("录入失败，请检查神识链接"); }
+    } catch (err) { toast.error("录入失败，请检查神识链���"); }
   };
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -53,7 +53,7 @@ export function NewTaskDialog({ children }: { children: React.ReactNode }) {
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4">
           <div className="space-y-2">
-            <Label className="font-bold ml-1">法诀名��</Label>
+            <Label className="font-bold ml-1">法诀���称</Label>
             <Input {...register('title')} placeholder="如：九转元功第一层" className="rounded-2xl h-14 bg-secondary/50 border-none" />
             {errors.title && <p className="text-red-500 text-xs font-bold">{errors.title.message}</p>}
           </div>
@@ -64,10 +64,10 @@ export function NewTaskDialog({ children }: { children: React.ReactNode }) {
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger className="rounded-2xl h-14 bg-secondary/50 border-none"><SelectValue /></SelectTrigger>
                   <SelectContent className="rounded-2xl">
-                    <SelectItem value="reading">藏经��� (阅读)</SelectItem>
+                    <SelectItem value="reading">藏经阁 (阅读)</SelectItem>
                     <SelectItem value="listening">悟道台 (听力)</SelectItem>
-                    <SelectItem value="writing">演武场 (创作)</SelectItem>
-                    <SelectItem value="other">外务堂 (其���)</SelectItem>
+                    <SelectItem value="writing">演武场 (创��)</SelectItem>
+                    <SelectItem value="other">外务堂 (其他)</SelectItem>
                   </SelectContent>
                 </Select>
               )} />
@@ -78,10 +78,10 @@ export function NewTaskDialog({ children }: { children: React.ReactNode }) {
                 <Select onValueChange={v => field.onChange(Number(v))} value={String(field.value)}>
                   <SelectTrigger className="rounded-2xl h-14 bg-secondary/50 border-none"><SelectValue /></SelectTrigger>
                   <SelectContent className="rounded-2xl">
-                    <SelectItem value="1">烈火红 (P1-���急)</SelectItem>
-                    <SelectItem value="2">流水蓝 (P2-重���)</SelectItem>
-                    <SelectItem value="3">巨石灰 (P3-普通)</SelectItem>
-                    <SelectItem value="4">清风绿 (P4-随意)</SelectItem>
+                    <SelectItem value="1">P0-火急</SelectItem>
+                    <SelectItem value="2">P1-重要</SelectItem>
+                    <SelectItem value="3">P2-普���</SelectItem>
+                    <SelectItem value="4">P3-随意</SelectItem>
                   </SelectContent>
                 </Select>
               )} />

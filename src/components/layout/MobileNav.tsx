@@ -5,11 +5,11 @@ import { LayoutDashboard, Target, Trophy, Users, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/use-app-store';
 export function MobileNav() {
-  const settings = useAppStore(s => s.userStats?.settings);
+  const notificationsEnabled = useAppStore(s => s.userStats?.settings.notificationsEnabled ?? false);
   const navItems = [
     { label: "大厅", icon: LayoutDashboard, path: "/", hasNotif: false },
     { label: "任务", icon: Target, path: "/stats", hasNotif: false },
-    { label: "广场", icon: Users, path: "/community", hasNotif: settings?.notificationsEnabled ?? false },
+    { label: "广场", icon: Users, path: "/community", hasNotif: notificationsEnabled },
     { label: "成就", icon: Trophy, path: "/achievements", hasNotif: false },
     { label: "我的", icon: User, path: "/settings", hasNotif: false },
   ];
