@@ -3,37 +3,31 @@ import { ok, bad, notFound, Env } from './core-utils';
 import { TaskEntity } from './entities';
 import type { Task } from '@shared/types';
 export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
-  // 获取所有任务
   app.get('/api/tasks', async (c) => {
     const tasks = await TaskEntity.list(c.env);
-    // Sort tasks by status then priority then created date
-    const sorted = tasks.items.sort((a, b) => {
-      if (a.status === 'completed' && b.status !== 'completed') return 1;
-      if (a.status !== 'completed' && b.status === 'completed') return -1;
-      return a.priority - b.priority || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    });
-    return ok(c, sorted);
+    return ok(c, tasks.items);
   });
-  // ���建任务
   app.post('/api/tasks', async (c) => {
     const body = await c.req.json<Task>();
-    if (!body.title) return bad(c, '标��是必填项');
+    if (!body.title) return bad(c, '标题是必填项');
     const now = new Date().toISOString();
     const taskData: Task = {
       ...body,
       id: body.id || crypto.randomUUID(),
       priority: body.priority || 3,
       status: body.status || 'todo',
+      type: body.type || 'other',
+      dueTime: body.dueTime || "09:00",
       pomodoroEstimate: body.pomodoroEstimate || 1,
-      pomodoroSpent: body.pomodoroSpent || 0,
+      pomodoroSpent: 0,
       tags: body.tags || [],
-      createdAt: body.createdAt || now,
+      isArchived: false,
+      createdAt: now,
       updatedAt: now
     };
     const task = await TaskEntity.create(c.env, taskData);
     return ok(c, task);
   });
-  // 更新任务
   app.patch('/api/tasks/:id', async (c) => {
     const id = c.req.param('id');
     const updates = await c.req.json<Partial<Task>>();
@@ -42,11 +36,11 @@ export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
     const task = await entity.mutate(s => ({
       ...s,
       ...updates,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      completedAt: updates.status === 'completed' ? new Date().toISOString() : s.completedAt
     }));
     return ok(c, task);
   });
-  // 删除任务
   app.delete('/api/tasks/:id', async (c) => {
     const id = c.req.param('id');
     const existed = await TaskEntity.delete(c.env, id);

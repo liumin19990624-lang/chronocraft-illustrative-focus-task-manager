@@ -8,10 +8,14 @@ export class TaskEntity extends IndexedEntity<Task> {
     title: "",
     priority: 3,
     status: 'todo',
+    type: 'other',
     dueDate: new Date().toISOString(),
+    dueTime: "09:00",
     pomodoroEstimate: 1,
     pomodoroSpent: 0,
     tags: [],
+    isArchived: false,
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
 }

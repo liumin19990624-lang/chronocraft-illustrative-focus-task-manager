@@ -23,11 +23,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAppStore } from '@/store/use-app-store';
 import { toast } from 'sonner';
-import { Priority } from '@shared/types';
+import { Priority, TaskType } from '@shared/types';
 const taskSchema = z.object({
-  title: z.string().min(3, '标题至少需要3个字符'),
-  priority: z.coerce.number().min(1).max(4).transform(val => val as Priority),
-  pomodoroEstimate: z.coerce.number().int().min(1, '至少需要1个番茄钟'),
+  title: z.string().min(2, '标题太短了'),
+  priority: z.coerce.number().min(1).max(4),
+  type: z.enum(['reading', 'listening', 'writing', 'other']),
+  dueTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, '��间格式错误 (HH:mm)'),
+  pomodoroEstimate: z.coerce.number().int().min(1, '至少需要1个番茄'),
 });
 type TaskFormData = z.infer<typeof taskSchema>;
 export function NewTaskDialog({ children }: { children: React.ReactNode }) {
@@ -43,21 +45,21 @@ export function NewTaskDialog({ children }: { children: React.ReactNode }) {
     resolver: zodResolver(taskSchema),
     defaultValues: {
       title: '',
-      priority: 3 as Priority,
+      priority: 3,
+      type: 'other',
+      dueTime: '09:00',
       pomodoroEstimate: 1,
     },
   });
   const onSubmit = async (data: TaskFormData) => {
     const taskData = {
-      title: data.title,
-      priority: data.priority as Priority,
-      pomodoroEstimate: data.pomodoroEstimate,
+      ...data,
       dueDate: new Date().toISOString(),
-      description: '',
+      tags: [],
     };
     try {
       await addTask(taskData);
-      toast.success(`任务 "${data.title}" 已添加!`);
+      toast.success(`任务 "${data.title}" 已成功添加到卡组`);
       reset();
       setOpen(false);
     } catch (err) {
@@ -67,64 +69,73 @@ export function NewTaskDialog({ children }: { children: React.ReactNode }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[450px] rounded-[2rem]">
         <DialogHeader>
-          <DialogTitle>新建任务蓝图</DialogTitle>
-          <DialogDescription>
-            规划你的下一个杰作。填写下面的详细信息。
+          <DialogTitle className="text-2xl font-display font-bold">构思新蓝图</DialogTitle>
+          <DialogDescription className="text-base">
+            规划你的下���个创造性任务，设置优先级与预估时长。
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="title" className="text-right">
-              标题
-            </Label>
-            <div className="col-span-3">
-              <Input id="title" {...register('title')} placeholder="例如：完成项目报告" />
-              {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
-            </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="title" className="text-sm font-bold">任务标题</Label>
+            <Input id="title" {...register('title')} placeholder="例如：深度阅读《时间简史》" className="rounded-xl" />
+            {errors.title && <p className="text-red-500 text-xs">{errors.title.message}</p>}
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="priority" className="text-right">
-              优先级
-            </Label>
-            <div className="col-span-3">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-bold">类型</Label>
+              <Controller
+                name="type"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger className="rounded-xl">
+                      <SelectValue placeholder="选择类型" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="reading">论文/书籍阅读</SelectItem>
+                      <SelectItem value="listening">���力/播客练习</SelectItem>
+                      <SelectItem value="writing">内容/代码创作</SelectItem>
+                      <SelectItem value="other">其他</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-bold">优先级</Label>
               <Controller
                 name="priority"
                 control={control}
                 render={({ field }) => (
-                  <Select onValueChange={(val) => field.onChange(Number(val))} value={String(field.value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="选择优先级" />
+                  <Select onValueChange={(v) => field.onChange(Number(v))} value={String(field.value)}>
+                    <SelectTrigger className="rounded-xl">
+                      <SelectValue placeholder="优先级" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="1">P1 - 紧急</SelectItem>
                       <SelectItem value="2">P2 - 重要</SelectItem>
                       <SelectItem value="3">P3 - 普通</SelectItem>
-                      <SelectItem value="4">P4 - 随意</SelectItem>
+                      <SelectItem value="4">P4 - ��意</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
               />
             </div>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="pomodoroEstimate" className="text-right">
-              番茄钟
-            </Label>
-            <div className="col-span-3">
-              <Input
-                id="pomodoroEstimate"
-                type="number"
-                {...register('pomodoroEstimate')}
-                placeholder="预估番茄钟数量"
-                min="1"
-              />
-              {errors.pomodoroEstimate && <p className="text-red-500 text-xs mt-1">{errors.pomodoroEstimate.message}</p>}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="dueTime" className="text-sm font-bold">执行时间</Label>
+              <Input id="dueTime" {...register('dueTime')} placeholder="09:00" className="rounded-xl" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pomodoroEstimate" className="text-sm font-bold">番茄钟预估</Label>
+              <Input id="pomodoroEstimate" type="number" {...register('pomodoroEstimate')} className="rounded-xl" />
             </div>
           </div>
-          <DialogFooter>
-            <Button type="submit">创建任务</Button>
+          <DialogFooter className="pt-4">
+            <Button type="submit" className="w-full rounded-2xl h-12 text-lg font-bold">发布任务</Button>
           </DialogFooter>
         </form>
       </DialogContent>

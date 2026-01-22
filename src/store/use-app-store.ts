@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Task, TimerState, TimerMode, TaskStatus, Priority } from '@shared/types';
+import { Task, TimerState, TimerMode, TaskStatus } from '@shared/types';
 import { api } from '@/lib/api-client';
 interface AppStore {
   tasks: Task[];
@@ -7,7 +7,7 @@ interface AppStore {
   error: string | null;
   timer: TimerState;
   fetchTasks: () => Promise<void>;
-  addTask: (task: Omit<Task, 'id' | 'status' | 'pomodoroSpent' | 'tags' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addTask: (taskData: any) => Promise<void>;
   updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   completeTask: (id: string) => void;
@@ -29,6 +29,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     timeLeft: POMODORO_TIME,
     isRunning: false,
     activeTaskId: null,
+    isPaused: false,
   },
   fetchTasks: async () => {
     set({ isLoading: true, error: null });
@@ -37,7 +38,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       set({ tasks, isLoading: false });
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
-      console.error("Failed to fetch tasks", error);
     }
   },
   addTask: async (taskData) => {
@@ -48,11 +48,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
       });
       set((state) => ({ tasks: [newTask, ...state.tasks] }));
     } catch (error) {
-      console.error("Failed to add task:", error);
+      console.error("Add task failed", error);
     }
   },
   updateTask: async (id, updates) => {
-    const originalTasks = get().tasks;
     set((state) => ({
       tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
     }));
@@ -62,20 +61,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
         body: JSON.stringify(updates),
       });
     } catch (error) {
-      console.error("Failed to update task:", error);
-      set({ tasks: originalTasks });
+      get().fetchTasks(); // Rollback on error
     }
   },
-  deleteTask: async (id: string) => {
-    const originalTasks = get().tasks;
-    set((state) => ({
-      tasks: state.tasks.filter((t) => t.id !== id),
-    }));
+  deleteTask: async (id) => {
+    set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
     try {
       await api(`/api/tasks/${id}`, { method: 'DELETE' });
     } catch (error) {
-      console.error("Failed to delete task:", error);
-      set({ tasks: originalTasks });
+      get().fetchTasks();
     }
   },
   completeTask: (id) => {
@@ -85,26 +79,34 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
   },
   startFocus: (taskId) => set((state) => ({
-    timer: { ...state.timer, activeTaskId: taskId, isRunning: true, mode: 'focus', timeLeft: POMODORO_TIME }
+    timer: { ...state.timer, activeTaskId: taskId, isRunning: true, isPaused: false, mode: 'focus', timeLeft: POMODORO_TIME }
   })),
   stopFocus: () => set((state) => ({
-    timer: { ...state.timer, isRunning: false, activeTaskId: null, timeLeft: POMODORO_TIME }
+    timer: { ...state.timer, isRunning: false, isPaused: false, activeTaskId: null, timeLeft: POMODORO_TIME }
   })),
   tick: () => set((state) => {
     if (!state.timer.isRunning || state.timer.timeLeft <= 0) return state;
-    return {
-      timer: { ...state.timer, timeLeft: state.timer.timeLeft - 1 }
-    };
+    const newTime = state.timer.timeLeft - 1;
+    if (newTime === 0 && state.timer.activeTaskId) {
+      // Auto increment pomodoro spent
+      const taskId = state.timer.activeTaskId;
+      setTimeout(() => {
+        const task = get().tasks.find(t => t.id === taskId);
+        if (task) get().updateTask(taskId, { pomodoroSpent: task.pomodoroSpent + 1 });
+      }, 0);
+    }
+    return { timer: { ...state.timer, timeLeft: newTime } };
   }),
   toggleTimer: () => set((state) => ({
-    timer: { ...state.timer, isRunning: !state.timer.isRunning }
+    timer: { ...state.timer, isRunning: !state.timer.isRunning, isPaused: state.timer.isRunning }
   })),
   setTimerMode: (mode) => set((state) => ({
     timer: {
       ...state.timer,
       mode,
       timeLeft: mode === 'focus' ? POMODORO_TIME : mode === 'short-break' ? SHORT_BREAK : LONG_BREAK,
-      isRunning: false
+      isRunning: false,
+      isPaused: false
     }
   })),
 }));
