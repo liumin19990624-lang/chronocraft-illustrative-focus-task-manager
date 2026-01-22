@@ -4,6 +4,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/s
 import { AppSidebar } from "@/components/app-sidebar";
 import { MobileNav } from "./MobileNav";
 import { FocusOverlay } from "@/components/focus/FocusOverlay";
+import { FloatingAiHub } from "@/components/ai/FloatingAiHub";
 import { useAppStore } from "@/store/use-app-store";
 import { Outlet } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
@@ -25,6 +26,8 @@ export function AppLayout(): JSX.Element {
         )}>
           <Outlet />
         </div>
+        {/* Global AI Hub accessible from any route */}
+        {!isFocusActive && <FloatingAiHub />}
         <MobileNav />
         <Toaster richColors position="top-center" />
       </SidebarInset>

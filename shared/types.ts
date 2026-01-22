@@ -1,5 +1,5 @@
-export type Priority = 1 | 2 | 3 | 4; // 1: 烈火, 2: 流���, 3: 巨石, 4: 清风
-export type TaskStatus = 0 | 1 | 2 | 3; // 0: 未开始, 1: 进行��, 2: 已完成, 3: 已过期
+export type Priority = 1 | 2 | 3 | 4; // 1: 烈火, 2: 流水, 3: 巨石, 4: 清风
+export type TaskStatus = 0 | 1 | 2 | 3; // 0: 未开始, 1: 进行中, 2: 已完成, 3: 已过期
 export type TaskType = 'reading' | 'listening' | 'writing' | 'other';
 export interface Task {
   id: string;
@@ -36,18 +36,22 @@ export interface AcademicPaper {
   isOA: boolean;
 }
 export type AiTaskType = 'interpret' | 'modify' | 'translate' | 'evaluate';
+export type AiRole = 'mentor' | 'reviewer' | 'peer';
 export interface AiAssistantResult {
   taskId: string;
   type: AiTaskType;
   content: string;
+  versions?: string[]; // Multi-scheme rewriting
   originalText?: string;
   metadata?: {
     score?: {
       grammar: number;
       logic: number;
       originality: number;
+      innovation?: number;
     };
     suggestions?: string[];
+    diffs?: string[];
   };
 }
 export type PostCategory = 'dynamics' | 'collaborative' | 'qna';
@@ -64,7 +68,7 @@ export interface SocialPost {
   tags: string[];
 }
 export interface UserSettings {
-  fontScale: number; // 0.8 to 1.2
+  fontScale: number;
   themePreference: 'light' | 'dark' | 'system';
   privacyMode: boolean;
   notificationsEnabled: boolean;
@@ -98,4 +102,8 @@ export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
   error?: string;
+}
+export interface AiStoreState {
+  isStreaming: boolean;
+  streamingContent: string;
 }

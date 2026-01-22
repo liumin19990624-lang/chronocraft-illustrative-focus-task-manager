@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Trophy, Star, Lock, Award, User, Flame, Sparkles } from 'lucide-react';
+import { Trophy, Lock, User, Sparkles } from 'lucide-react';
 import { ACHIEVEMENT_LIST } from '@/lib/mock-academic';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAppStore } from '@/store/use-app-store';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -26,15 +24,11 @@ function AchievementCard({ achievement, isUnlocked }: { achievement: any, isUnlo
           isUnlocked ? "bg-card" : "bg-secondary/40 grayscale"
         )}>
           {isUnlocked && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.5 }} 
-              animate={{ opacity: 1, scale: 1 }} 
-              className="absolute inset-0 bg-primary/5 rounded-[2.5rem] pointer-events-none" 
-            />
+            <div className="absolute inset-0 bg-primary/5 rounded-[2.5rem] pointer-events-none" />
           )}
           <div className={cn(
-            "h-20 w-20 rounded-3xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110",
-            isUnlocked ? "bg-yellow-100 text-yellow-600 shadow-lg" : "bg-slate-200 text-slate-400"
+            "h-20 w-20 rounded-3xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 shadow-lg",
+            isUnlocked ? "bg-yellow-100 text-yellow-600" : "bg-slate-200 text-slate-400"
           )}>
             {isUnlocked ? <Icon className="h-10 w-10" /> : <Lock className="h-8 w-8" />}
           </div>
@@ -43,8 +37,8 @@ function AchievementCard({ achievement, isUnlocked }: { achievement: any, isUnlo
         </Card>
         <Card className="absolute inset-0 backface-hidden rotate-y-180 flex flex-col items-center justify-center text-center p-6 rounded-[2.5rem] border-none shadow-xl bg-slate-900 text-white">
           <Badge className="bg-yellow-500 mb-4">{achievement.requirement}</Badge>
-          <p className="text-sm font-medium leading-relaxed italic">"{achievement.description}"</p>
-          <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+          <p className="text-sm font-medium leading-relaxed italic px-4">"{achievement.description}"</p>
+          <div className="mt-6 flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
             <Sparkles className="h-3 w-3" /> 点击返回
           </div>
         </Card>
@@ -52,59 +46,63 @@ function AchievementCard({ achievement, isUnlocked }: { achievement: any, isUnlo
     </div>
   );
 }
-export function AchievementsPage() {
+export default function AchievementsPage() {
   const unlockedIds = useAppStore(s => s.userStats?.unlockedAchievements ?? []);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   useEffect(() => {
     api<any[]>('/api/leaderboard').then(setLeaderboard).catch(console.error);
   }, []);
   return (
-    <AppLayout container>
-      <header className="mb-12 text-center space-y-4">
-        <div className="mx-auto h-24 w-24 rounded-[2rem] bg-yellow-500 flex items-center justify-center shadow-2xl rotate-[-5deg] mb-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12">
+      <header className="mb-16 text-center space-y-4">
+        <motion.div 
+          initial={{ scale: 0.8, rotate: -5 }}
+          animate={{ scale: 1, rotate: 0 }}
+          className="mx-auto h-24 w-24 rounded-[2rem] bg-yellow-500 flex items-center justify-center shadow-2xl mb-8"
+        >
           <Trophy className="h-12 w-12 text-white" />
-        </div>
-        <h1 className="text-5xl font-display font-bold tracking-tight">荣誉殿堂</h1>
-        <p className="text-muted-foreground text-lg max-w-xl mx-auto italic">���修行之路的每一刻都���数。”</p>
+        </motion.div>
+        <h1 className="text-6xl font-display font-bold tracking-tight">荣誉殿堂</h1>
+        <p className="text-muted-foreground text-xl max-w-xl mx-auto italic">“修行之路，寸阴是惜；功不唐捐，玉汝于成。”</p>
       </header>
       <Tabs defaultValue="achievements" className="w-full">
-        <TabsList className="bg-secondary/50 rounded-2xl h-14 p-1 mb-10 max-w-xs mx-auto flex">
-          <TabsTrigger value="achievements" className="flex-1 rounded-xl font-bold h-full">成就墙</TabsTrigger>
+        <TabsList className="bg-secondary/50 rounded-2xl h-14 p-1 mb-12 max-w-xs mx-auto flex border border-border/50">
+          <TabsTrigger value="achievements" className="flex-1 rounded-xl font-bold h-full">成就���</TabsTrigger>
           <TabsTrigger value="rankings" className="flex-1 rounded-xl font-bold h-full">宗门排行</TabsTrigger>
         </TabsList>
         <TabsContent value="achievements">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {ACHIEVEMENT_LIST.map((achievement) => (
               <AchievementCard key={achievement.id} achievement={achievement} isUnlocked={unlockedIds.includes(achievement.id)} />
             ))}
           </div>
         </TabsContent>
         <TabsContent value="rankings">
-          <Card className="max-w-4xl mx-auto rounded-[3rem] p-10 bg-card/60 backdrop-blur-xl border-none shadow-soft">
+          <Card className="max-w-4xl mx-auto rounded-[3.5rem] p-10 bg-card/60 backdrop-blur-xl border-none shadow-soft">
             <div className="space-y-6">
               {leaderboard.map((scholar, index) => (
-                <div key={scholar.id} className="flex items-center gap-6 group p-4 rounded-3xl hover:bg-primary/5 transition-all">
-                  <div className="text-2xl font-display font-bold text-muted-foreground/40 w-8">{index + 1}</div>
-                  <Avatar className="h-16 w-16 border-2 border-primary/10">
+                <div key={scholar.id} className="flex items-center gap-6 group p-5 rounded-[2rem] hover:bg-primary/5 transition-all">
+                  <div className="text-3xl font-display font-bold text-muted-foreground/30 w-10">{index + 1}</div>
+                  <Avatar className="h-16 w-16 border-2 border-primary/10 shadow-lg">
                     <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${scholar.name}`} />
                     <AvatarFallback><User /></AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-2">
                       <p className="font-bold text-xl">{scholar.name}</p>
-                      <Badge variant="outline" className="rounded-lg font-bold">LV. {scholar.level}</Badge>
+                      <Badge variant="outline" className="rounded-lg font-bold border-primary/20 text-primary">LV. {scholar.level}</Badge>
                     </div>
-                    <div className="h-2 w-full bg-secondary rounded-full mt-3 overflow-hidden">
-                      <motion.div 
+                    <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                      <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${(scholar.xp % 1000) / 10}%` }}
-                        className="h-full bg-primary" 
+                        className="h-full bg-primary"
                       />
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">总灵力</p>
-                    <p className="text-xl font-display font-bold text-primary">{scholar.xp.toLocaleString()}</p>
+                  <div className="text-right pl-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">总灵力</p>
+                    <p className="text-2xl font-display font-bold text-primary">{scholar.xp.toLocaleString()}</p>
                   </div>
                 </div>
               ))}
@@ -112,6 +110,6 @@ export function AchievementsPage() {
           </Card>
         </TabsContent>
       </Tabs>
-    </AppLayout>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Task, TimerState, TimerMode, UserStats, SocialPost, UserSettings, AiAssistantResult, AiTaskType } from '@shared/types';
+import { Task, TimerState, TimerMode, UserStats, SocialPost, UserSettings, AiAssistantResult, AiTaskType, AiRole } from '@shared/types';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
 import { MOCK_AI_RESPONSES, ACHIEVEMENT_LIST } from '@/lib/mock-academic';
@@ -11,6 +11,9 @@ interface AppStore {
   error: string | null;
   timer: TimerState;
   showArchived: boolean;
+  // AI Streaming state
+  isStreaming: boolean;
+  streamingContent: string;
   initUser: (nickname: string) => void;
   fetchTasks: () => Promise<void>;
   fetchStats: () => Promise<void>;
@@ -31,7 +34,7 @@ interface AppStore {
   setDistracted: (distracted: boolean) => void;
   drainSpirit: (amount: number) => void;
   awardRewards: (xp: number, coins: number) => void;
-  requestAiAssistant: (text: string, type: AiTaskType) => Promise<AiAssistantResult>;
+  requestAiAssistant: (text: string, type: AiTaskType, role?: AiRole) => Promise<AiAssistantResult>;
   completePomodoro: () => Promise<void>;
   checkAchievements: () => void;
 }
@@ -45,6 +48,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   error: null,
   showArchived: false,
   timer: { mode: 'focus', timeLeft: POMODORO_TIME, isRunning: false, activeTaskId: null, isPaused: false, isDistracted: false, spiritHealth: 100 },
+  isStreaming: false,
+  streamingContent: '',
   initUser: (nickname: string) => {
     const newUser: UserStats = {
       id: crypto.randomUUID(), nickname, avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${nickname}`,
@@ -69,9 +74,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
       try { localStats = JSON.parse(localUserStr); } catch (e) { console.error(e); }
     }
     try {
-      const remote = await api<UserStats>(`/api/stats?userId={localStats?.id || 'me'}`);
+      const remote = await api<UserStats>('/api/stats');
       const merged = { ...localStats, ...remote, settings: { ...localStats?.settings, ...remote.settings } };
-      set({ userStats: merged });
+      set({ userStats: merged as UserStats });
       localStorage.setItem('xian_user', JSON.stringify(merged));
     } catch (e) {
       if (localStats) set({ userStats: localStats });
@@ -173,22 +178,42 @@ export const useAppStore = create<AppStore>((set, get) => ({
       });
     }
   },
-  requestAiAssistant: async (text, type) => {
+  requestAiAssistant: async (text, type, role = 'mentor') => {
+    set({ isStreaming: true, streamingContent: '' });
+    const responseContent = MOCK_AI_RESPONSES[type] || "笔灵元气不足，���能给出回应。";
+    // Simulate streaming
     return new Promise((resolve) => {
-      setTimeout(() => {
-        const responseContent = MOCK_AI_RESPONSES[type] || "笔灵由于法力不支，未能给出回应。";
-        const result: AiAssistantResult = {
-          taskId: crypto.randomUUID(),
-          type,
-          content: responseContent,
-          originalText: text,
-          metadata: type === 'evaluate' ? {
-            score: { grammar: 92, logic: 95, originality: 98 },
-            suggestions: ["逻��严密", "原创度高"]
-          } : undefined
-        };
-        resolve(result);
-      }, 2000);
+      let index = 0;
+      const interval = setInterval(() => {
+        if (index < responseContent.length) {
+          set(s => ({ streamingContent: s.streamingContent + responseContent[index] }));
+          index++;
+        } else {
+          clearInterval(interval);
+          set({ isStreaming: false });
+          const result: AiAssistantResult = {
+            taskId: crypto.randomUUID(),
+            type,
+            content: responseContent,
+            originalText: text,
+            versions: type === 'modify' ? [
+              responseContent,
+              "在���学术语境下，该论述可进一步精炼为：研究表明该机制具有显著的全局建模优势。",
+              "更为地道的表达方式是：The proposed mechanism exhibits superior global modeling capabilities in academic contexts."
+            ] : undefined,
+            metadata: {
+              score: { 
+                grammar: 92, 
+                logic: 95, 
+                originality: 98,
+                innovation: type === 'modify' ? 88 : undefined
+              },
+              suggestions: ["逻辑严密", "原创度高"]
+            }
+          };
+          resolve(result);
+        }
+      }, 30);
     });
   },
   toggleShowArchived: () => set(s => ({ showArchived: !s.showArchived })),
