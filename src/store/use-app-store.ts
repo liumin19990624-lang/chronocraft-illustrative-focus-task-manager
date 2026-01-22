@@ -54,12 +54,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
   streamingContent: '',
   initUser: (nickname: string) => {
     const newUser: UserStats = {
-      id: crypto.randomUUID(), nickname, avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${nickname}`,
+      id: 'me', nickname, avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${nickname}`,
       level: 1, xp: 0, coins: 0, streak: 0, totalFocusMinutes: 0, totalTasksCompleted: 0, unlockedAchievements: [],
       checkinHistory: [], focusHistory: {}, lastActiveDate: new Date().toISOString(), settings: DEFAULT_SETTINGS,
     };
     localStorage.setItem('xian_user', JSON.stringify(newUser));
     set({ userStats: newUser });
+    api('/api/stats', { method: 'PATCH', body: JSON.stringify({ nickname, avatar: newUser.avatar }) }).catch(console.error);
   },
   fetchTasks: async () => {
     const user = get().userStats;
@@ -237,7 +238,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       set({ userStats: statsWithHistory });
       localStorage.setItem('xian_user', JSON.stringify(statsWithHistory));
       const fortuneOptions = ["今日宜：生吞ArXiv文献", "今日宜：御气润色", "今日忌：道心破碎", "今日忌：摸鱼乱神"];
-      const randomFortune = `${stats.nickname}道友！${fortuneOptions[Math.floor(Math.random() * fortuneOptions.length)]}。`;
+      const randomFortune = `${statsWithHistory.nickname}道友！${fortuneOptions[Math.floor(Math.random() * fortuneOptions.length)]}。`;
       set(s => ({ userStats: s.userStats ? { ...s.userStats, dailyFortune: randomFortune } : null }));
       toast.success("掌门令准！", { description: "签到成功！" });
     } catch (e) {

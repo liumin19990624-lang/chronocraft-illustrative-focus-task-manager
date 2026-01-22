@@ -1,5 +1,6 @@
 import { IndexedEntity, Entity } from "./core-utils";
 import type { Task, UserStats } from "@shared/types";
+import { MOCK_TASKS } from '../src/lib/mock-tasks';
 export class TaskEntity extends IndexedEntity<Task> {
   static readonly entityName = "task";
   static readonly indexName = "tasks";
@@ -19,6 +20,8 @@ export class TaskEntity extends IndexedEntity<Task> {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
+
+  static readonly seedData = MOCK_TASKS;
 }
 export class StatsEntity extends Entity<UserStats> {
   static readonly entityName = "stats";
