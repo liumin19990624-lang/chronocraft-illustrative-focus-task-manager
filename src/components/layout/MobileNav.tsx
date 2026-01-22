@@ -1,15 +1,19 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, Target, Trophy, Users, User } from 'lucide-react';
+import { LayoutDashboard, Target, Trophy, Sparkles, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/use-app-store';
 export function MobileNav() {
-  const notificationsEnabled = useAppStore(s => s.userStats?.settings.notificationsEnabled ?? false);
+  // Zero-Tolerance selectors
+  const lastCheckinDate = useAppStore(s => s.userStats?.lastCheckinDate);
+  const today = new Date().toISOString().split('T')[0];
+  const needsCheckin = lastCheckinDate !== today;
+
   const navItems = [
     { label: "大厅", icon: LayoutDashboard, path: "/", hasNotif: false },
+    { label: "点卯", icon: Sparkles, path: "/checkin", hasNotif: needsCheckin },
     { label: "任务", icon: Target, path: "/stats", hasNotif: false },
-    { label: "广场", icon: Users, path: "/community", hasNotif: notificationsEnabled },
     { label: "成就", icon: Trophy, path: "/achievements", hasNotif: false },
     { label: "我的", icon: User, path: "/settings", hasNotif: false },
   ];

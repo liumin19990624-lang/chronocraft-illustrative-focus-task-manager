@@ -47,6 +47,33 @@ export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
     }));
     return ok(c, stats);
   });
+  app.post('/api/checkin', async (c) => {
+    const entity = new StatsEntity(c.env, 'me');
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    
+    const stats = await entity.mutate(s => {
+      if (s.lastCheckinDate === today) return s;
+      
+      // Calculate streak
+      let newStreak = s.streak;
+      if (s.lastCheckinDate === yesterday) {
+        newStreak += 1;
+      } else {
+        newStreak = 1;
+      }
+      
+      // Calculate rewards
+      const baseCoins = Math.floor(Math.random() * 101) + 50; // 50-150
+      const multiplier = 1 + (newStreak * 0.1);
+      const coinsGained = Math.floor(baseCoins * multiplier);
+      
+      const history = s.checkinHistory || [];
+      return { ...s, lastCheckinDate: today, streak: newStreak, coins: s.coins + coinsGained, xp: s.xp + 100, checkinHistory: [...history, today] };
+    });
+    
+    return ok(c, stats);
+  });
   app.get('/api/leaderboard', async (c) => {
     // In a real app, this would use a global XP index.
     // For now, we simulate with mock data.

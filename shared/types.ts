@@ -86,6 +86,9 @@ export interface UserStats {
   totalTasksCompleted: number;
   lastActiveDate?: string;
   unlockedAchievements: string[];
+  checkinHistory: string[];
+  lastCheckinDate?: string;
+  dailyFortune?: string;
   settings: UserSettings;
 }
 export type TimerMode = 'focus' | 'short-break' | 'long-break';

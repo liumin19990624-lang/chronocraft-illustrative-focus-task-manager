@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/store/use-app-store';
 import { Card } from '@/components/ui/card';
@@ -13,40 +13,38 @@ export function CheckinPage() {
   const userStats = useAppStore(s => s.userStats);
   const performCheckin = useAppStore(s => s.performCheckin);
   const isCheckingIn = useAppStore(s => s.isCheckingIn);
+  const tasks = useAppStore(s => s.tasks);
   const [isFlipped, setIsFlipped] = useState(false);
-  const checkinHistory = useMemo(() => userStats?.checkinHistory ?? [], [userStats?.checkinHistory]);
-  const lastCheckinDate = useAppStore(s => s.userStats?.lastCheckinDate);
-  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const checkinHistory = userStats?.checkinHistory ?? [];
+  const lastCheckinDate = userStats?.lastCheckinDate;
+  const today = new Date().toISOString().split('T')[0];
   const hasCheckedInToday = lastCheckinDate === today;
-  const streak = useAppStore(s => s.userStats?.streak ?? 0);
-  const fortune = useAppStore(s => s.userStats?.dailyFortune ?? "点击掌��令，洞察今日运势...");
-  const handleCheckinClick = useCallback(async () => {
-    if (hasCheckedInToday || isCheckingIn) return;
+  const streak = userStats?.streak ?? 0;
+  const fortune = userStats?.dailyFortune ?? "点击掌门令，���察今日运势...";
+  const handleCheckinClick = async () => {
+    if (hasCheckedInToday) return;
     playSound('success');
     triggerConfetti();
     setIsFlipped(true);
-    try {
-      await performCheckin();
-    } catch (err) {
-      console.error("Checkin failed", err);
-    }
-  }, [hasCheckedInToday, isCheckingIn, performCheckin]);
-  const checkinDates = useMemo(() => checkinHistory.map(d => new Date(d)), [checkinHistory]);
+    await performCheckin();
+  };
+  const checkinDates = checkinHistory.map(d => new Date(d));
   const recommendations = [
     { title: "每日词海", icon: BookOpen, path: "/vocab", color: "text-orange-500", bg: "bg-orange-500/10" },
-    { title: "神识精听", icon: Headphones, path: "/listening", color: "text-blue-500", bg: "bg-blue-500/10" },
+    { title: "神识��听", icon: Headphones, path: "/listening", color: "text-blue-500", bg: "bg-blue-500/10" },
     { title: "论文研习", icon: FileText, path: "/papers", color: "text-emerald-500", bg: "bg-emerald-500/10" },
   ];
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12">
       <header className="mb-12 text-center md:text-left">
         <h1 className="text-5xl font-display font-bold tracking-tight text-foreground flex items-center gap-4 justify-center md:justify-start">
-          <CalendarCheck className="h-12 w-12 text-primary" />
+          <CalendarCheck className="h-12 w-12 text-primary" /> 
           宗门点卯
         </h1>
-        <p className="text-muted-foreground text-lg mt-2 font-medium italic">“一日不学，如隔三秋。道友今日修行可曾懈��？”</p>
+        <p className="text-muted-foreground text-lg mt-2 font-medium italic">“一日不学，如隔三秋���道友今日修行可曾懈怠？”</p>
       </header>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        {/* Left Column: 3D Card and Fortune */}
         <div className="lg:col-span-5 space-y-8">
           <div className="relative h-[450px] w-full perspective-1000 cursor-pointer" onClick={handleCheckinClick}>
             <AnimatePresence mode="wait">
@@ -57,9 +55,10 @@ export function CheckinPage() {
                 transition={{ type: "spring", stiffness: 200, damping: 20 }}
                 className="w-full h-full preserve-3d relative"
               >
+                {/* Front: Sect Master's Order */}
                 <Card className="absolute inset-0 backface-hidden flex flex-col items-center justify-center p-12 rounded-[3.5rem] bg-slate-900 border-none shadow-2xl overflow-hidden group">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-50" />
-                  <motion.div
+                  <motion.div 
                     animate={{ scale: [1, 1.05, 1], rotate: [-1, 1, -1] }}
                     transition={{ duration: 4, repeat: Infinity }}
                     className="relative z-10 p-8 bg-white/5 rounded-4xl border border-white/10 shadow-inner"
@@ -69,15 +68,16 @@ export function CheckinPage() {
                   <h3 className="mt-8 text-3xl font-display font-bold text-white relative z-10">掌门令</h3>
                   <p className="mt-2 text-yellow-500/60 font-black uppercase tracking-[0.4em] text-xs relative z-10">Sect Master's Order</p>
                   {!hasCheckedInToday && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
+                    <motion.div 
+                      initial={{ opacity: 0 }} 
+                      animate={{ opacity: 1 }} 
                       className="absolute bottom-10 text-white/40 text-xs font-bold uppercase tracking-widest animate-pulse"
                     >
                       点击开启今日运势
                     </motion.div>
                   )}
                 </Card>
+                {/* Back: Reward and Fortune */}
                 <Card className="absolute inset-0 backface-hidden rotate-y-180 flex flex-col items-center justify-center p-10 rounded-[3.5rem] bg-card border-none shadow-2xl overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl" />
                   <div className="flex items-center gap-3 mb-6">
@@ -109,7 +109,7 @@ export function CheckinPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-4xl font-display font-bold">{streak}</p>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/60">当前不间断修行天数</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/60">当��不间断修行天数</p>
               </div>
               <div className="p-4 bg-white/10 rounded-3xl">
                 <Flame className={cn("h-10 w-10", streak > 0 ? "text-orange-400 animate-pulse" : "text-white/20")} />
@@ -117,6 +117,7 @@ export function CheckinPage() {
             </div>
           </Card>
         </div>
+        {/* Right Column: Calendar and Recommendations */}
         <div className="lg:col-span-7 space-y-10">
           <Card className="border-none shadow-soft bg-card/40 backdrop-blur-xl rounded-[3rem] p-8">
             <h2 className="text-2xl font-display font-bold mb-6 flex items-center gap-3">
@@ -149,7 +150,7 @@ export function CheckinPage() {
                     </div>
                     <h3 className="font-bold text-lg mb-1">{rec.title}</h3>
                     <div className="flex items-center text-xs font-bold text-muted-foreground group-hover:text-primary transition-colors">
-                      ���即开始 <ChevronRight className="h-3 w-3 ml-1" />
+                      立��开始 <ChevronRight className="h-3 w-3 ml-1" />
                     </div>
                   </Card>
                 </Link>

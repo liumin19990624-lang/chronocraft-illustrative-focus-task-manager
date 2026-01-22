@@ -20,6 +20,7 @@ import { ListeningPage } from '@/pages/ListeningPage'
 import { PaperReaderPage } from '@/pages/PaperReaderPage'
 import { WriterPage } from '@/pages/WriterPage'
 import AchievementsPage from '@/pages/AchievementsPage'
+import { CheckinPage } from '@/pages/CheckinPage'
 import ResourcesPage from '@/pages/ResourcesPage'
 import CommunityPage from '@/pages/CommunityPage'
 import SettingsPage from '@/pages/SettingsPage'
@@ -57,6 +58,10 @@ const router = createBrowserRouter([
       {
         path: "achievements",
         element: <AchievementsPage />,
+      },
+      {
+        path: "checkin",
+        element: <CheckinPage />,
       },
       {
         path: "resources",

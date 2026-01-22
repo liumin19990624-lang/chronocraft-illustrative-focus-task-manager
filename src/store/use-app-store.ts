@@ -13,6 +13,7 @@ interface AppStore {
   showArchived: boolean;
   // AI Streaming state
   isStreaming: boolean;
+  isCheckingIn: boolean;
   streamingContent: string;
   initUser: (nickname: string) => void;
   fetchTasks: () => Promise<void>;
@@ -35,6 +36,7 @@ interface AppStore {
   drainSpirit: (amount: number) => void;
   awardRewards: (xp: number, coins: number) => void;
   requestAiAssistant: (text: string, type: AiTaskType, role?: AiRole) => Promise<AiAssistantResult>;
+  performCheckin: () => Promise<void>;
   completePomodoro: () => Promise<void>;
   checkAchievements: () => void;
 }
@@ -49,11 +51,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
   showArchived: false,
   timer: { mode: 'focus', timeLeft: POMODORO_TIME, isRunning: false, activeTaskId: null, isPaused: false, isDistracted: false, spiritHealth: 100 },
   isStreaming: false,
+  isCheckingIn: false,
   streamingContent: '',
   initUser: (nickname: string) => {
     const newUser: UserStats = {
       id: crypto.randomUUID(), nickname, avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${nickname}`,
-      level: 1, xp: 0, coins: 0, streak: 0, totalFocusMinutes: 0, totalTasksCompleted: 0, unlockedAchievements: [], settings: DEFAULT_SETTINGS,
+      level: 1, xp: 0, coins: 0, streak: 0, totalFocusMinutes: 0, totalTasksCompleted: 0, unlockedAchievements: [], 
+      checkinHistory: [], settings: DEFAULT_SETTINGS,
     };
     localStorage.setItem('xian_user', JSON.stringify(newUser));
     set({ userStats: newUser });
@@ -215,6 +219,43 @@ export const useAppStore = create<AppStore>((set, get) => ({
         }
       }, 30);
     });
+  },
+  performCheckin: async () => {
+    const stats = get().userStats;
+    if (!stats) return;
+    const today = new Date().toISOString().split('T')[0];
+    if (stats.lastCheckinDate === today) {
+      toast.info("今日已领过法旨", { description: "道友明日再来。" });
+      return;
+    }
+    set({ isCheckingIn: true });
+    try {
+      const res = await api<UserStats>('/api/checkin', { method: 'POST' });
+      
+      // Update local state immediately
+      set({ userStats: res });
+      localStorage.setItem('xian_user', JSON.stringify(res));
+      
+      // Generate a humorous AI fortune
+      const nicknames = ["卷王", "肝帝", "学神", "道祖"];
+      const titles = ["今日宜：生吞ArXiv文��", "今日忌：道心破碎", "今日宜：御笔润色", "今日忌：摸鱼乱神"];
+      const randomFortune = `${nicknames[Math.floor(Math.random() * nicknames.length)]}！${titles[Math.floor(Math.random() * titles.length)]}。修行进度加��，神识海阔天空。`;
+      
+      // Update fortune in store
+      set(s => ({ 
+        userStats: s.userStats ? { ...s.userStats, dailyFortune: randomFortune } : null 
+      }));
+
+      // Reward UI
+      const coinsGained = res.coins - stats.coins;
+      toast.success("掌门令准！", { 
+        description: `��到成功！获得 ${coinsGained} 灵石 (连胜倍率: ${(1 + res.streak * 0.1).toFixed(1)}x)` 
+      });
+    } catch (e) {
+      toast.error("法阵波动，签到失败");
+    } finally {
+      set({ isCheckingIn: false });
+    }
   },
   toggleShowArchived: () => set(s => ({ showArchived: !s.showArchived })),
   startFocus: (taskId) => set(s => ({ timer: { ...s.timer, activeTaskId: taskId, isRunning: true, isPaused: false, mode: 'focus', timeLeft: POMODORO_TIME, isDistracted: false, spiritHealth: 100 } })),
