@@ -1,4 +1,5 @@
 import React from "react";
+import { cn } from "@/lib/utils";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { MobileNav } from "./MobileNav";
@@ -17,7 +18,7 @@ export function AppLayout({ children, container = false, className, contentClass
           <SidebarTrigger />
         </div>
         <div className={cn(
-          "min-h-screen pb-24 md:pb-0", // Space for MobileNav
+          "min-h-screen pb-24 md:pb-0", // Space for MobileNav to prevent content overlap
           container && "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12",
           contentClassName
         )}>
@@ -28,4 +29,3 @@ export function AppLayout({ children, container = false, className, contentClass
     </SidebarProvider>
   );
 }
-import { cn } from "@/lib/utils";

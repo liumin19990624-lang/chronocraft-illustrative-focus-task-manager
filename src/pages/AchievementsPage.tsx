@@ -1,7 +1,8 @@
 import React from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
-import { Trophy, Star, Lock, Info, Award, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Trophy, Star, Lock, Award, User } from 'lucide-react';
 import { ACHIEVEMENT_LIST, LEADERBOARD_DATA } from '@/lib/mock-academic';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
@@ -20,9 +21,9 @@ export function AchievementsPage() {
           <div className="mx-auto h-24 w-24 rounded-[2rem] bg-yellow-500 flex items-center justify-center shadow-2xl shadow-yellow-500/20 rotate-[-5deg] mb-6">
             <Trophy className="h-12 w-12 text-white" />
           </div>
-          <h1 className="text-5xl font-display font-bold tracking-tight">荣誉殿堂</h1>
+          <h1 className="text-5xl font-display font-bold tracking-tight text-foreground">荣誉殿堂</h1>
           <p className="text-muted-foreground text-lg font-medium max-w-xl mx-auto italic">
-            “修行��路，每一刻都算数。这里见证了��跨越学术荒原的足迹。”
+            “修行之路，每���刻都算数。这里见证了你跨越学术荒原的足迹。”
           </p>
         </header>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
@@ -64,7 +65,7 @@ export function AchievementsPage() {
                             {isUnlocked ? <Icon className="h-10 w-10" /> : <Lock className="h-8 w-8" />}
                           </div>
                           <div className="space-y-1 relative z-10">
-                            <h3 className="font-display font-bold text-base">{achievement.name}</h3>
+                            <h3 className="font-display font-bold text-base text-foreground">{achievement.name}</h3>
                             <p className="text-[10px] text-muted-foreground font-medium px-2">{achievement.description}</p>
                           </div>
                           {isUnlocked && (
@@ -83,8 +84,8 @@ export function AchievementsPage() {
           {/* Right: Sect Ranking (Leaderboard) */}
           <aside className="lg:col-span-4 space-y-8">
             <Card className="rounded-[3rem] border-none shadow-soft p-8 bg-card/60 backdrop-blur-xl">
-              <h2 className="text-2xl font-display font-bold mb-8 flex items-center gap-3">
-                <Star className="h-6 w-6 text-yellow-500" /> 宗门排行 (Ranking)
+              <h2 className="text-2xl font-display font-bold mb-8 flex items-center gap-3 text-foreground">
+                <Star className="h-6 w-6 text-yellow-500" /> 宗门排行
               </h2>
               <div className="space-y-6">
                 {LEADERBOARD_DATA.map((scholar, index) => (
@@ -107,7 +108,7 @@ export function AchievementsPage() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <p className="font-bold text-sm">{scholar.name}</p>
+                        <p className="font-bold text-sm text-foreground">{scholar.name}</p>
                         <Badge variant="outline" className="rounded-lg text-[10px] font-bold border-primary/20 bg-primary/5">
                           {scholar.level} 重
                         </Badge>
@@ -122,17 +123,17 @@ export function AchievementsPage() {
                   </div>
                 ))}
               </div>
-              <Button className="w-full mt-8 rounded-2xl font-bold h-12 bg-secondary text-foreground hover:bg-secondary/80">
-                查���论道全榜
+              <Button className="w-full mt-8 rounded-2xl font-bold h-12 bg-secondary text-secondary-foreground hover:bg-secondary/80">
+                查看论道全榜
               </Button>
             </Card>
             <Card className="rounded-[3rem] border-none shadow-soft p-8 bg-slate-900 text-white text-center space-y-4">
               <Trophy className="h-12 w-12 text-yellow-500 mx-auto" />
               <div className="space-y-1">
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">当前排���</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">当前排名</p>
                 <p className="text-2xl font-display font-bold text-yellow-500">真传弟子</p>
               </div>
-              <p className="text-xs text-slate-500">超越了 88% ���同门修士</p>
+              <p className="text-xs text-slate-500">超越了 88% 的同门修士</p>
             </Card>
           </aside>
         </div>

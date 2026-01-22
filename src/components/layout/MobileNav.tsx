@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { LayoutDashboard, Target, Trophy, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 export function MobileNav() {
@@ -40,4 +41,3 @@ export function MobileNav() {
     </nav>
   );
 }
-import { motion } from 'framer-motion';
