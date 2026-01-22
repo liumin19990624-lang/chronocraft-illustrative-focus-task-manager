@@ -70,15 +70,22 @@ export const useAppStore = create<AppStore>((set, get) => ({
   awardXP: async (amount: number) => {
     const stats = get().userStats;
     const newXP = stats.xp + amount;
-    const nextLevelXP = stats.level * 1000;
-    let newLevel = stats.level;
+    const currentLevel = stats.level;
+    const nextLevelXP = currentLevel * 1000;
+    let newLevel = currentLevel;
     if (newXP >= nextLevelXP) {
-      newLevel += 1;
-      toast.success(`���级提升！`, { description: `恭喜你达到了等级 ${newLevel}，资深建筑师！` });
+      newLevel = Math.floor(newXP / 1000) + 1;
+      if (newLevel > currentLevel) {
+        toast.success(`等��提升！`, { description: `恭喜你达到了等级 ${newLevel}，资深建��师！` });
+      }
     }
     const updatedStats = { ...stats, xp: newXP, level: newLevel };
     set({ userStats: updatedStats });
-    await api('/api/stats', { method: 'PATCH', body: JSON.stringify(updatedStats) });
+    try {
+      await api('/api/stats', { method: 'PATCH', body: JSON.stringify(updatedStats) });
+    } catch (e) {
+      console.error("Failed to sync XP", e);
+    }
   },
   addTask: async (taskData) => {
     try {
@@ -121,11 +128,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
     if (!task || task.status === 'completed') return;
     get().updateTask(id, { status: 'completed' as TaskStatus, completedAt: new Date().toISOString() });
     get().awardXP(100);
-    // Update streak logic
     const stats = get().userStats;
     const lastActive = stats.lastActiveDate ? parseISO(stats.lastActiveDate) : null;
     let newStreak = stats.streak;
-    if (!lastActive || isYesterday(lastActive)) {
+    if (!lastActive) {
+      newStreak = 1;
+    } else if (isYesterday(lastActive)) {
       newStreak += 1;
     } else if (!isToday(lastActive)) {
       newStreak = 1;

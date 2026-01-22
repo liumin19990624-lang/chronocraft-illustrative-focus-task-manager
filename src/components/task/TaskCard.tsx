@@ -38,8 +38,7 @@ export function TaskCard({ task }: TaskCardProps) {
   const completeTask = useAppStore(s => s.completeTask);
   const startFocus = useAppStore(s => s.startFocus);
   const updateTask = useAppStore(s => s.updateTask);
-  const timer = useAppStore(s => s.timer);
-  const activeTaskId = timer.activeTaskId;
+  const activeTaskId = useAppStore(s => s.timer.activeTaskId);
   const isCompleted = task.status === 'completed';
   const isArchived = task.isArchived;
   const isActive = activeTaskId === task.id;
@@ -55,7 +54,7 @@ export function TaskCard({ task }: TaskCardProps) {
     triggerTaskCompletionConfetti(x, y);
     completeTask(task.id);
     toast.success(`构筑完成: "${task.title}"`, {
-      description: "获得 +10 经验值",
+      description: "获得 +100 经验值",
     });
   };
   const toggleArchive = (e?: React.MouseEvent) => {
@@ -65,7 +64,7 @@ export function TaskCard({ task }: TaskCardProps) {
       isArchived: newArchived,
       status: newArchived ? 'archived' : (isCompleted ? 'completed' : 'todo')
     });
-    toast.info(newArchived ? "蓝图已移至档��室" : "蓝图已重新激活");
+    toast.info(newArchived ? "蓝图已移至档案���" : "蓝图已重新激活");
   };
   const swipeHandlers = useSwipeable({
     onSwipedLeft: () => toggleArchive(),
@@ -142,7 +141,7 @@ export function TaskCard({ task }: TaskCardProps) {
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="h-3.5 w-3.5" />
-                <span>{task.pomodoroSpent} / {task.pomodoroEstimate} 番茄���</span>
+                <span>{task.pomodoroSpent} / {task.pomodoroEstimate} 番茄钟</span>
               </div>
             </div>
             <div className="h-2 w-full bg-secondary/60 rounded-full overflow-hidden">

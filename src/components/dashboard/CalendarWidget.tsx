@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { ChevronRight, LayoutList, PieChart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useShallow } from 'zustand/react/shallow';
 export function CalendarWidget() {
-  const tasks = useAppStore(s => s.tasks);
+  const tasks = useAppStore(useShallow(s => s.tasks));
   const [date, setDate] = useState<Date | undefined>(new Date());
   const tasksForSelectedDay = useMemo(() => {
     if (!date) return [];
@@ -28,11 +29,11 @@ export function CalendarWidget() {
       pending: tasks.filter(t => t.status !== 'completed' && !isPast(parseISO(t.dueDate))).map(t => parseISO(t.dueDate)),
     };
   }, [tasks]);
-  const modifierStyles = {
+  const modifierStyles = useMemo(() => ({
     completed: { color: 'rgb(34 197 94)', borderBottom: '3px solid rgb(34 197 94)' },
     overdue: { color: 'rgb(239 68 68)', borderBottom: '3px solid rgb(239 68 68)' },
     pending: { color: 'rgb(100 116 139)', borderBottom: '3px solid rgb(100 116 139)' },
-  };
+  }), []);
   return (
     <Card className="border-none shadow-soft bg-secondary/20 rounded-[3rem] overflow-hidden">
       <CardHeader className="pb-2 pt-10 px-10">
@@ -59,7 +60,7 @@ export function CalendarWidget() {
           }}
         />
         <AnimatePresence mode="wait">
-          <motion.div 
+          <motion.div
             key={date?.toISOString() || 'none'}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -69,7 +70,7 @@ export function CalendarWidget() {
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="text-sm font-black uppercase tracking-widest text-muted-foreground/60">
-                  {date ? format(date, 'MM月dd��', { locale: zhCN }) : '未选择'}
+                  {date ? format(date, 'MM��dd日', { locale: zhCN }) : '未选择'}
                 </h4>
                 <p className="text-xl font-display font-bold mt-1">当日蓝图</p>
               </div>
@@ -83,7 +84,7 @@ export function CalendarWidget() {
                   <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
                     <LayoutList className="h-10 w-10 text-muted-foreground/20" />
                     <p className="text-base text-muted-foreground font-display italic">
-                      “���日无蓝图，正是休憩时”
+                      ��今日无蓝图，正是休憩时”
                     </p>
                   </div>
                 ) : (
