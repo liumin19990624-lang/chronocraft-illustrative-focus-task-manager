@@ -82,7 +82,8 @@ function runSetupCommands() {
     "bun add @fontsource/playfair-display@^5.0.23",
     "bun add @fontsource/patrick-hand@^5.0.9",
     "bun add react-swipeable",
-    "bun add lucide-react@latest"
+    "bun add lucide-react@latest",
+    "bun add recharts"
 ];
     
     if (commands.length === 0) {
