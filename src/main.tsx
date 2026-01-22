@@ -10,6 +10,7 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import '@/index.css'
 import { HomePage } from '@/pages/HomePage'
 import { StatsPage } from '@/pages/StatsPage'
@@ -37,9 +38,11 @@ if ('serviceWorker' in navigator) {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ErrorBoundary>
-        <RouterProvider router={router} />
-      </ErrorBoundary>
+      <TooltipProvider>
+        <ErrorBoundary>
+          <RouterProvider router={router} />
+        </ErrorBoundary>
+      </TooltipProvider>
     </QueryClientProvider>
   </StrictMode>,
 )

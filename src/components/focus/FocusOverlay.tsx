@@ -1,20 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/store/use-app-store';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Play, Pause, X, CheckCircle2, Coffee, Sparkles, Send, Music } from 'lucide-react';
+import { Play, Pause, X, CheckCircle2, Coffee, Sparkles, Send } from 'lucide-react';
 import { triggerConfetti } from '@/components/ui/confetti';
 import { Badge } from '@/components/ui/badge';
 import { toast } from "sonner";
 import { playSound } from '@/lib/audio';
 import { cn } from '@/lib/utils';
+import { useShallow } from 'zustand/react/shallow';
 export function FocusOverlay() {
   const activeTaskId = useAppStore(s => s.timer.activeTaskId);
   const isRunning = useAppStore(s => s.timer.isRunning);
   const isPaused = useAppStore(s => s.timer.isPaused);
   const timeLeft = useAppStore(s => s.timer.timeLeft);
-  const tasks = useAppStore(s => s.tasks);
+  const tasks = useAppStore(useShallow(s => s.tasks));
   const tick = useAppStore(s => s.tick);
   const toggleTimer = useAppStore(s => s.toggleTimer);
   const stopFocus = useAppStore(s => s.stopFocus);
@@ -22,7 +23,7 @@ export function FocusOverlay() {
   const saveSessionNote = useAppStore(s => s.saveSessionNote);
   const [showSummary, setShowSummary] = useState(false);
   const [summaryNote, setSummaryNote] = useState('');
-  const activeTask = tasks.find(t => t.id === activeTaskId);
+  const activeTask = useMemo(() => tasks.find(t => t.id === activeTaskId), [tasks, activeTaskId]);
   useEffect(() => {
     let interval: any;
     if (isRunning && activeTaskId && !showSummary) {
@@ -34,28 +35,32 @@ export function FocusOverlay() {
     if (timeLeft === 0 && activeTaskId && isRunning) {
       playSound('ding');
       if (window.navigator.vibrate) window.navigator.vibrate([300, 100, 300]);
-      toast.success("专注时段结束，建筑师应当小憩片刻。");
+      toast.success("专注时段结束，建���师应当小憩片刻。");
       setShowSummary(true);
       triggerConfetti();
     }
   }, [timeLeft, activeTaskId, isRunning]);
+  const handleFinishSession = useCallback(() => {
+    if (activeTaskId) {
+      if (summaryNote.trim()) {
+        saveSessionNote(activeTaskId, summaryNote);
+      }
+      setShowSummary(false);
+      setSummaryNote('');
+      stopFocus();
+    }
+  }, [activeTaskId, summaryNote, saveSessionNote, stopFocus]);
+  const handleTaskComplete = useCallback(() => {
+    if (activeTaskId) {
+      playSound('success');
+      triggerConfetti();
+      completeTask(activeTaskId);
+      stopFocus();
+    }
+  }, [activeTaskId, completeTask, stopFocus]);
   if (!activeTaskId) return null;
   const minutes = Math.floor(timeLeft / 60);
   const seconds = timeLeft % 60;
-  const handleFinishSession = () => {
-    if (summaryNote.trim()) {
-      saveSessionNote(activeTaskId, summaryNote);
-    }
-    setShowSummary(false);
-    setSummaryNote('');
-    stopFocus();
-  };
-  const handleTaskComplete = () => {
-    playSound('success');
-    triggerConfetti();
-    completeTask(activeTaskId);
-    stopFocus();
-  };
   return (
     <AnimatePresence>
       <motion.div
@@ -89,7 +94,7 @@ export function FocusOverlay() {
                 "px-8 py-2 text-sm rounded-full font-bold uppercase tracking-[0.2em] border-none shadow-lg",
                 isRunning ? "bg-red-500 text-white" : isPaused ? "bg-amber-500 text-white" : "bg-primary text-primary-foreground"
               )}>
-                {isRunning ? "正在进行深度构筑" : isPaused ? "构筑暂停中" : "准备进入专注态"}
+                {isRunning ? "正在进���深度构筑" : isPaused ? "构筑暂停中" : "准备进���专注态"}
               </Badge>
               <h2 className="text-5xl md:text-7xl font-display font-bold tracking-tight leading-tight px-4 max-w-3xl mx-auto">
                 {activeTask?.title}
@@ -119,7 +124,7 @@ export function FocusOverlay() {
                     <Coffee className="h-20 w-20 text-amber-500" />
                     <div className="text-center">
                       <p className="font-display font-bold text-3xl">短暂休憩</p>
-                      <p className="text-muted-foreground font-medium">伟大的作品需要��心的喘息</p>
+                      <p className="text-muted-foreground font-medium">伟大的作品需要身心的��息</p>
                     </div>
                   </div>
                 </motion.div>
@@ -143,8 +148,8 @@ export function FocusOverlay() {
                 完成构筑
               </Button>
             </div>
-            <motion.div 
-              animate={{ opacity: [0.4, 0.7, 0.4] }} 
+            <motion.div
+              animate={{ opacity: [0.4, 0.7, 0.4] }}
               transition={{ duration: 4, repeat: Infinity }}
               className="text-muted-foreground italic text-xl font-display font-medium max-w-2xl mx-auto"
             >
@@ -162,10 +167,10 @@ export function FocusOverlay() {
             </div>
             <div className="space-y-4">
               <h2 className="text-4xl font-display font-bold">专注阶段完成��</h2>
-              <p className="text-muted-foreground text-xl font-medium">你刚刚完成了 25 分钟的深度工作，记录下当下的��悟或进展：</p>
+              <p className="text-muted-foreground text-xl font-medium">你刚刚完成了 25 分钟的深度工作，记录下当下的感悟或进展���</p>
             </div>
-            <Textarea 
-              placeholder="例如：完成了核心逻辑的重构，下一步准备编写测试用例..." 
+            <Textarea
+              placeholder="例如：完成了核心逻辑的重���，下一步准备编写测试用例..."
               value={summaryNote}
               onChange={(e) => setSummaryNote(e.target.value)}
               className="min-h-[160px] rounded-3xl bg-secondary/50 border-none p-6 text-lg focus-visible:ring-primary/20 resize-none"
