@@ -1,185 +1,112 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState } from 'react';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { FileText, Brain, Sparkles, Languages, Bookmark, ArrowLeft, Search as SearchIcon, ListTree, MousePointer2 } from 'lucide-react';
+import { FileText, Brain, Sparkles, Languages, Bookmark, Share2 } from 'lucide-react';
 import { PAPER_DATA } from '@/lib/mock-academic';
-import { PaperSearch } from '@/components/papers/PaperSearch';
-import { AiAssistantPanel } from '@/components/ai/AiAssistantPanel';
-import { AcademicPaper, AiAssistantResult, AiTaskType } from '@shared/types';
 import { cn } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAppStore } from '@/store/use-app-store';
+import { motion } from 'framer-motion';
 export function PaperReaderPage() {
-  const [viewMode, setViewMode] = useState<'search' | 'read'>('search');
   const [activeSection, setActiveSection] = useState('abstract');
-  const [currentPaper, setCurrentPaper] = useState<AcademicPaper | null>(null);
-  const [aiPanelOpen, setAiPanelOpen] = useState(false);
-  const [aiResult, setAiResult] = useState<AiAssistantResult | null>(null);
-  const [isAiProcessing, setIsAiProcessing] = useState(false);
-  const [bubblePos, setBubblePos] = useState<{ x: number, y: number } | null>(null);
-  const [selection, setSelection] = useState('');
-  const requestAiAssistant = useAppStore(s => s.requestAiAssistant);
-  const readerRef = useRef<HTMLDivElement>(null);
-  const handleSelectPaper = (paper: AcademicPaper) => {
-    setCurrentPaper(paper);
-    setViewMode('read');
-    setActiveSection('abstract');
-  };
-  const handleAiAction = async (text: string, type: AiTaskType) => {
-    setAiPanelOpen(true);
-    setIsAiProcessing(true);
-    setBubblePos(null);
-    try {
-      const result = await requestAiAssistant(text, type, 'mentor');
-      setAiResult(result);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsAiProcessing(false);
-    }
-  };
-  const onTextSelection = useCallback(() => {
-    const sel = window.getSelection();
-    if (sel && sel.toString().trim().length > 5) {
-      const range = sel.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      setSelection(sel.toString().trim());
-      setBubblePos({
-        x: rect.left + rect.width / 2,
-        y: rect.top - 10
-      });
-    } else {
-      setBubblePos(null);
-    }
-  }, []);
-  // Determine which text to show based on if we are viewing a selected paper or the sample
-  const displayTitle = currentPaper?.title || PAPER_DATA.title;
-  const displayAuthors = currentPaper?.authors || PAPER_DATA.authors;
-  const displayYear = currentPaper?.year || PAPER_DATA.year;
-  const displayAbstract = currentPaper?.abstract || PAPER_DATA.abstract;
-  const displayIntro = (currentPaper && currentPaper.id !== 'sample') ? ["AI 笔灵正在��析引言内容...", "请稍候，或使用‘通俗解释’功能获取核心要义。"] : PAPER_DATA.introduction;
+  const [showAnalysis, setShowAnalysis] = useState(true);
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12" onMouseUp={onTextSelection}>
-      <AnimatePresence mode="wait">
-        {viewMode === 'search' ? (
-          <motion.div key="search-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <header className="text-center space-y-4 mb-12">
-              <div className="mx-auto h-20 w-20 rounded-3xl bg-primary text-primary-foreground flex items-center justify-center shadow-2xl rotate-[-4deg]">
-                <SearchIcon className="h-10 w-10" />
+    <AppLayout container>
+      <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-primary font-bold">
+            <FileText className="h-5 w-5" />
+            <span className="uppercase tracking-widest text-sm">Paper Reader / 论文研习</span>
+          </div>
+          <h1 className="text-4xl font-display font-bold leading-tight max-w-3xl">
+            {PAPER_DATA.title}
+          </h1>
+          <p className="text-muted-foreground font-medium">{PAPER_DATA.authors}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="icon" className="rounded-2xl"><Bookmark className="h-5 w-5" /></Button>
+          <Button variant="outline" size="icon" className="rounded-2xl"><Share2 className="h-5 w-5" /></Button>
+          <Button className="rounded-2xl font-bold px-6 bg-emerald-600 hover:bg-emerald-500">导出摘���</Button>
+        </div>
+      </header>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Pane: Reader */}
+        <Card className="lg:col-span-8 p-10 rounded-[3rem] border-none shadow-soft min-h-[700px] bg-card/40 backdrop-blur-xl">
+          <Tabs value={activeSection} onValueChange={setActiveSection} className="w-full">
+            <TabsList className="bg-secondary/50 p-1 rounded-2xl mb-8">
+              <TabsTrigger value="abstract" className="rounded-xl px-6 font-bold">Abstract</TabsTrigger>
+              <TabsTrigger value="intro" className="rounded-xl px-6 font-bold">Introduction</TabsTrigger>
+              <TabsTrigger value="method" className="rounded-xl px-6 font-bold">Methodology</TabsTrigger>
+            </TabsList>
+            <TabsContent value="abstract" className="mt-0">
+              <div className="prose prose-slate dark:prose-invert max-w-none space-y-6">
+                <p className="text-2xl font-display italic text-muted-foreground leading-relaxed">
+                  {PAPER_DATA.abstract}
+                </p>
               </div>
-              <h1 className="text-5xl font-display font-bold tracking-tight">藏经阁检索</h1>
-              <p className="text-muted-foreground text-lg italic">“博观而约取，厚积而薄发。”</p>
-            </header>
-            <PaperSearch onSelectPaper={handleSelectPaper} />
-          </motion.div>
-        ) : (
-          <motion.div key="read-view" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-            <header className="mb-10 flex flex-col md:flex-row md:items-start justify-between gap-6">
-              <div className="space-y-3">
-                <Button variant="ghost" className="mb-4 rounded-xl font-bold gap-2 pl-0 hover:bg-transparent" onClick={() => setViewMode('search')}>
-                  <ArrowLeft className="h-4 w-4" /> 返回藏经阁
-                </Button>
-                <h1 className="text-4xl font-display font-bold leading-tight max-w-4xl">{displayTitle}</h1>
-                <p className="text-muted-foreground font-medium">{displayAuthors} • {displayYear}</p>
+            </TabsContent>
+            <TabsContent value="intro" className="mt-0">
+              <div className="space-y-6 text-lg leading-relaxed text-foreground/80 font-medium">
+                {PAPER_DATA.introduction.map((para, i) => (
+                  <p key={i} className="hover:bg-primary/5 p-2 rounded-lg transition-colors cursor-text">
+                    {para}
+                  </p>
+                ))}
               </div>
-              <div className="flex items-center gap-3 md:pt-14">
-                <Button variant="outline" size="icon" className="rounded-2xl h-12 w-12 border-primary/20"><Bookmark className="h-5 w-5" /></Button>
-                <Button className="rounded-2xl font-bold h-12 px-8 bg-emerald-600 shadow-xl shadow-emerald-900/10">离线参悟</Button>
-              </div>
-            </header>
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-              <Card ref={readerRef} className="lg:col-span-8 p-12 rounded-[3.5rem] border-none shadow-soft min-h-[800px] bg-card/40 backdrop-blur-xl relative select-text">
-                <Tabs value={activeSection} onValueChange={setActiveSection}>
-                  <TabsList className="bg-secondary/50 rounded-2xl mb-10 h-14 p-1">
-                    <TabsTrigger value="abstract" className="rounded-xl px-8 font-bold h-full">摘要 (Abstract)</TabsTrigger>
-                    <TabsTrigger value="intro" className="rounded-xl px-8 font-bold h-full">引言 (Introduction)</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="abstract" className="mt-0">
-                    <div className="prose prose-slate dark:prose-invert max-w-none">
-                      <p className="text-2xl font-display italic leading-relaxed text-foreground/80 first-letter:text-5xl first-letter:font-bold first-letter:mr-1">
-                        {displayAbstract}
-                      </p>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="intro" className="mt-0">
-                    <div className="space-y-10">
-                      {displayIntro.map((para, i) => (
-                        <div key={i} className="group relative p-6 rounded-3xl hover:bg-primary/5 transition-all">
-                          <p className="text-lg leading-relaxed text-foreground/90">{para}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </TabsContent>
-                </Tabs>
+            </TabsContent>
+          </Tabs>
+        </Card>
+        {/* Right Pane: AI Analysis */}
+        <aside className="lg:col-span-4 space-y-6">
+          <div className="flex items-center justify-between px-2">
+            <h2 className="text-xl font-display font-bold flex items-center gap-2">
+              <Brain className="h-5 w-5 text-purple-500" /> 神识分�� (AI)
+            </h2>
+            <Button variant="ghost" size="sm" onClick={() => setShowAnalysis(!showAnalysis)} className="text-xs font-bold uppercase">
+              {showAnalysis ? "隐藏" : "显示"}
+            </Button>
+          </div>
+          {showAnalysis && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <Card className="p-6 rounded-4xl bg-purple-500/5 border-purple-500/10 space-y-4">
+                <div className="flex items-center gap-2 text-purple-500 font-bold">
+                  <Sparkles className="h-4 w-4" />
+                  <span className="text-xs uppercase tracking-widest">核心论点</span>
+                </div>
+                <ul className="space-y-3">
+                  {PAPER_DATA.aiAnalysis.keyPoints.map((point, i) => (
+                    <li key={i} className="flex gap-3 text-sm font-medium">
+                      <div className="h-5 w-5 rounded-full bg-purple-500/20 text-purple-600 flex items-center justify-center shrink-0 font-bold text-[10px]">{i+1}</div>
+                      {point}
+                    </li>
+                  ))}
+                </ul>
               </Card>
-              <aside className="lg:col-span-4 space-y-8">
-                 <Card className="p-8 rounded-[3rem] bg-card/60 backdrop-blur-xl border-none shadow-soft space-y-6">
-                  <h2 className="text-xl font-display font-bold flex items-center gap-3">
-                    <ListTree className="h-5 w-5 text-emerald-500" /> 法诀结构
-                  </h2>
-                  <div className="space-y-4 pl-4 border-l-2 border-primary/10">
-                    {['Abstract', 'Introduction', 'Methodology', 'Results', 'Conclusion'].map(s => (
-                      <div
-                        key={s}
-                        onClick={() => setActiveSection(s === 'Abstract' ? 'abstract' : 'intro')}
-                        className={cn("text-sm font-bold cursor-pointer transition-colors hover:text-primary",
-                        (activeSection === s.toLowerCase() || (s === 'Introduction' && activeSection === 'intro')) ? "text-primary translate-x-1" : "text-muted-foreground")}
-                      >
-                        {s}
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-                <Card className="p-8 rounded-[3rem] bg-slate-900 text-white space-y-6 shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl -mr-16 -mt-16" />
-                  <div className="flex items-center gap-3">
-                    <Brain className="h-6 w-6 text-purple-400" />
-                    <h2 className="text-xl font-display font-bold">笔灵洞察</h2>
-                  </div>
-                  <div className="space-y-4 relative z-10">
-                    {PAPER_DATA.aiAnalysis.keyPoints.map((pt, i) => (
-                      <div key={i} className="flex gap-3 text-sm font-medium text-slate-300">
-                        <Sparkles className="h-4 w-4 text-purple-400 shrink-0 mt-1" />
-                        {pt}
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              </aside>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {bubblePos && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: 10 }}
-            style={{ left: bubblePos.x, top: bubblePos.y }}
-            className="fixed z-[250] -translate-x-1/2 -translate-y-full mb-4 flex items-center gap-1 bg-slate-900/95 backdrop-blur-md p-1.5 rounded-2xl shadow-2xl border border-white/10"
-          >
-            <Button size="sm" variant="ghost" className="h-9 px-3 rounded-xl text-white hover:bg-white/10 text-xs font-bold gap-2" onClick={() => handleAiAction(selection, 'interpret')}>
-              <Brain className="h-3.5 w-3.5 text-purple-400" /> 通俗解释
-            </Button>
-            <div className="w-[1px] h-4 bg-white/10" />
-            <Button size="sm" variant="ghost" className="h-9 px-3 rounded-xl text-white hover:bg-white/10 text-xs font-bold gap-2" onClick={() => handleAiAction(selection, 'translate')}>
-              <Languages className="h-3.5 w-3.5 text-orange-400" /> 翻译
-            </Button>
-            <div className="w-[1px] h-4 bg-white/10" />
-            <Button size="sm" variant="ghost" className="h-9 px-3 rounded-xl text-white hover:bg-white/10 text-xs font-bold" onClick={() => handleAiAction(selection, 'evaluate')}>
-              <MousePointer2 className="h-3.5 w-3.5 text-emerald-400" /> 逻辑检测
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <AiAssistantPanel
-        isOpen={aiPanelOpen}
-        onClose={() => setAiPanelOpen(false)}
-        result={aiResult}
-        isProcessing={isAiProcessing}
-      />
-    </div>
+              <Card className="p-6 rounded-4xl bg-blue-500/5 border-blue-500/10 space-y-4">
+                <div className="flex items-center gap-2 text-blue-500 font-bold">
+                  <Languages className="h-4 w-4" />
+                  <span className="text-xs uppercase tracking-widest">关键术语</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {PAPER_DATA.aiAnalysis.terminology.map((term) => (
+                    <div key={term.word} className="bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl text-xs border border-blue-500/20 shadow-sm cursor-help hover:scale-105 transition-transform">
+                      <span className="font-bold text-blue-600">{term.word}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+              <div className="bg-secondary/30 p-8 rounded-[2.5rem] border border-border/50 text-center space-y-4">
+                <p className="text-sm italic text-muted-foreground font-medium">“书山有���勤为径，AI助航灵气生。”</p>
+                <div className="flex justify-center gap-4">
+                  <div className="h-2 w-16 bg-primary/10 rounded-full" />
+                  <div className="h-2 w-8 bg-primary/30 rounded-full" />
+                  <div className="h-2 w-24 bg-primary/5 rounded-full" />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </aside>
+      </div>
+    </AppLayout>
   );
 }

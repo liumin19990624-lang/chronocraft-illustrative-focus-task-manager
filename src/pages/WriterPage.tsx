@@ -1,128 +1,106 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
-import { PenTool, Sparkles, Zap, Languages, Brain, FileText, Target, Trophy } from 'lucide-react';
-import { AiAssistantPanel } from '@/components/ai/AiAssistantPanel';
+import { PenTool, Sparkles, Wand2, Zap, LayoutTemplate, Settings2 } from 'lucide-react';
+import { WRITING_SUGGESTIONS } from '@/lib/mock-academic';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/store/use-app-store';
-import { AiAssistantResult } from '@shared/types';
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 export function WriterPage() {
   const [text, setText] = useState('');
-  const spiritHealth = useAppStore(s => s.timer.spiritHealth);
-  const drainSpirit = useAppStore(s => s.drainSpirit);
-  const [aiPanelOpen, setAiPanelOpen] = useState(false);
-  const [aiResult, setAiResult] = useState<AiAssistantResult | null>(null);
-  const [isAiProcessing, setIsAiProcessing] = useState(false);
-  const requestAi = useAppStore(s => s.requestAiAssistant);
-  const handleAiAction = async (type: 'modify' | 'evaluate') => {
-    if (!text.trim()) return toast.warning("请先挥毫泼墨");
-    if (spiritHealth < 10) return toast.error("笔灵元气���足，请开启番茄钟潜修回复。");
-    setAiPanelOpen(true);
-    setIsAiProcessing(true);
-    const result = await requestAi(text, type, 'reviewer');
-    setAiResult(result);
-    setIsAiProcessing(false);
-    drainSpirit(15);
+  const [spirit, setSpirit] = useState(85);
+  const awardRewards = useAppStore(s => s.awardRewards);
+  const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const handleOptimization = () => {
+    if (spirit < 20) return;
+    setSpirit(prev => prev - 20);
+    awardRewards(10, 2);
   };
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12">
-      <header className="mb-12 flex flex-col md:flex-row items-center justify-between gap-8">
-        <div className="space-y-2">
-          <h1 className="text-5xl font-display font-bold text-purple-600 flex items-center gap-4">
-            <PenTool className="h-10 w-10" /> 灵感演武��
+    <AppLayout container>
+      <header className="mb-10 flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-display font-bold text-purple-600 flex items-center gap-3">
+            <PenTool className="h-8 w-8" /> 灵感演武场
           </h1>
-          <p className="text-muted-foreground text-lg">“笔灵助阵，共筑不世学术之章。”</p>
+          <p className="text-muted-foreground font-medium">笔灵��阵，点石成金的���术写作空间</p>
         </div>
-        <div className="flex items-center gap-8 bg-secondary/20 p-4 rounded-3xl border border-border/50 backdrop-blur-sm">
-          <div className="text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">笔灵元气 (Immersion)</p>
-            <div className="flex items-center gap-4 mt-1">
-              <Zap className={cn("h-5 w-5", spiritHealth < 20 ? "text-red-500 animate-pulse" : "text-amber-500")} />
-              <Progress value={spiritHealth} className="h-2.5 w-40" />
+        <div className="flex items-center gap-6">
+          <div className="text-right hidden sm:block">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">笔灵元气</p>
+            <div className="flex items-center gap-3 mt-1">
+              <Zap className="h-4 w-4 text-amber-500 fill-current" />
+              <Progress value={spirit} className="h-2 w-32 bg-amber-500/10" />
+              <span className="font-mono font-bold text-sm">{spirit}%</span>
             </div>
           </div>
-          <Button onClick={() => handleAiAction('modify')} className="rounded-2xl h-14 px-8 bg-purple-600 shadow-xl gap-3 text-lg font-bold hover:scale-105 transition-all">
-            <Sparkles className="h-6 w-6" /> 灵感改写
+          <Button className="rounded-2xl h-14 px-8 bg-purple-600 hover:bg-purple-500 font-bold shadow-xl shadow-purple-900/20 gap-2">
+            <Sparkles className="h-5 w-5" /> 灵感爆发
           </Button>
         </div>
       </header>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-        <Card className="lg:col-span-8 p-12 rounded-[3.5rem] border-none shadow-soft bg-card/40 backdrop-blur-2xl flex flex-col min-h-[700px] relative group">
-          <div className="flex items-center gap-3 mb-8 border-b border-border/50 pb-6 overflow-x-auto no-scrollbar">
-             <Button variant="outline" className="rounded-2xl font-bold gap-2 whitespace-nowrap" onClick={() => handleAiAction('modify')}>
-              <Languages className="h-4 w-4" /> 学术润色 (3版本)
-            </Button>
-            <Button variant="outline" className="rounded-2xl font-bold gap-2 whitespace-nowrap" onClick={() => handleAiAction('evaluate')}>
-              <FileText className="h-4 w-4" /> 深度批改 (雷达图)
-            </Button>
-            <Button variant="outline" className="rounded-2xl font-bold gap-2 whitespace-nowrap">
-              <Target className="h-4 w-4" /> 检查重复率
-            </Button>
-          </div>
-          <Textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="在此开始你的学术创作，或粘贴草稿以供笔灵解读..."
-            className="flex-1 border-none focus-visible:ring-0 text-xl font-medium bg-transparent p-0 resize-none leading-relaxed placeholder:text-muted-foreground/30"
-          />
-          <div className="absolute bottom-10 right-10 flex items-center gap-2 opacity-30 group-hover:opacity-100 transition-opacity">
-            <span className="text-xs font-mono font-bold">{text.length} ��</span>
-            <span className="text-xs font-mono font-bold">|</span>
-            <span className="text-xs font-mono font-bold">~{Math.ceil(text.length / 5)} 词</span>
-          </div>
-        </Card>
-        <aside className="lg:col-span-4 space-y-8">
-          <Card className="p-8 rounded-[3rem] bg-card/60 backdrop-blur-xl border-none shadow-soft overflow-hidden">
-            <h2 className="text-2xl font-display font-bold mb-6 flex items-center gap-3">
-              <Brain className="h-6 w-6 text-purple-500" /> 宗门批注
-            </h2>
-            <div className="space-y-6">
-              {!aiResult ? (
-                <div className="flex flex-col items-center justify-center py-24 opacity-20 text-center space-y-4">
-                  <div className="p-6 rounded-full bg-secondary">
-                    <PenTool className="h-12 w-12" />
-                  </div>
-                  <p className="text-base font-bold">请挥毫书写，笔灵���可入世</p>
-                </div>
-              ) : (
-                <div className="space-y-6 animate-slide-up">
-                  <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
-                    <p className="text-xs font-bold uppercase tracking-widest text-emerald-600 mb-1">修行得分</p>
-                    <div className="flex items-end gap-2">
-                      <span className="text-4xl font-display font-bold text-emerald-600">{aiResult.metadata?.score?.logic}</span>
-                      <span className="text-xs text-emerald-600/60 font-bold pb-1">/ 100</span>
-                    </div>
-                  </div>
-                  {aiResult.metadata?.suggestions?.map((s, i) => (
-                    <div key={i} className="p-4 rounded-2xl bg-secondary/50 border border-border/50 text-sm font-medium leading-relaxed">
-                      {s}
-                    </div>
-                  ))}
-                  <Button className="w-full rounded-2xl h-12 font-bold" variant="secondary" onClick={() => setAiPanelOpen(true)}>
-                    <Trophy className="h-4 w-4 mr-2" /> 详���报告
-                  </Button>
-                </div>
-              )}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        <div className="lg:col-span-8 space-y-6">
+          <Card className="rounded-[3rem] border-none shadow-soft p-12 bg-white/50 backdrop-blur-xl relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500 opacity-0 group-focus-within:opacity-100 transition-opacity" />
+            <Textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="在��挥毫泼墨，开启学术篇章..."
+              className="min-h-[600px] border-none focus-visible:ring-0 text-2xl font-medium bg-transparent p-0 placeholder:text-muted-foreground/30 resize-none leading-relaxed"
+            />
+            <div className="mt-8 pt-8 border-t border-border/50 flex items-center justify-between text-muted-foreground">
+              <div className="flex items-center gap-8">
+                <span className="text-sm font-bold tracking-widest uppercase">Words: {wordCount}</span>
+                <span className="text-sm font-bold tracking-widest uppercase">Characters: {text.length}</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" size="icon" className="rounded-xl"><LayoutTemplate className="h-5 w-5" /></Button>
+                <Button variant="ghost" size="icon" className="rounded-xl"><Settings2 className="h-5 w-5" /></Button>
+              </div>
             </div>
           </Card>
-          <Card className="p-8 rounded-[3rem] bg-slate-900 text-white shadow-2xl">
-            <h3 className="font-display font-bold text-xl mb-4">创作法��</h3>
-            <p className="text-sm text-slate-400 italic leading-relaxed">
-              “��学术创作，须言之有物，论之有据。���忌辞藻堆砌，宜以逻辑为骨，以创新为神。”
-            </p>
-          </Card>
+        </div>
+        <aside className="lg:col-span-4 space-y-6">
+          <h2 className="text-xl font-display font-bold px-2">笔灵建议 (AI Optimization)</h2>
+          <AnimatePresence>
+            {text.length > 50 && WRITING_SUGGESTIONS.map((suggestion, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 }}
+              >
+                <Card className="p-6 rounded-4xl bg-secondary/30 border-none shadow-sm space-y-4 hover:shadow-md transition-shadow group">
+                  <div className="flex items-center justify-between">
+                    <div className={cn("px-3 py-1 rounded-xl text-[10px] font-bold uppercase tracking-wider", 
+                      suggestion.type === 'grammar' ? 'bg-red-500/10 text-red-600' : 'bg-blue-500/10 text-blue-600'
+                    )}>
+                      {suggestion.type}
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={handleOptimization}>
+                      <Wand2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold text-muted-foreground line-through decoration-red-500/50 italic">"{suggestion.original}"</p>
+                    <p className="text-sm font-bold text-foreground">建议：<span className="text-emerald-600 underline decoration-emerald-500/30 underline-offset-4">{suggestion.refined}</span></p>
+                  </div>
+                  <p className="text-xs text-muted-foreground italic leading-relaxed">{suggestion.explanation}</p>
+                </Card>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {text.length <= 50 && (
+            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-40">
+              <PenTool className="h-12 w-12 text-muted-foreground" />
+              <p className="text-sm font-medium">开始书写，笔灵将��动分析文法</p>
+            </div>
+          )}
         </aside>
       </div>
-      <AiAssistantPanel
-        isOpen={aiPanelOpen}
-        onClose={() => setAiPanelOpen(false)}
-        result={aiResult}
-        isProcessing={isAiProcessing}
-        onApply={(content) => { setText(content); setAiPanelOpen(false); }}
-      />
-    </div>
+    </AppLayout>
   );
 }

@@ -16,6 +16,10 @@ import { HomePage } from '@/pages/HomePage'
 import { StatsPage } from '@/pages/StatsPage'
 import { VocabPage } from '@/pages/VocabPage'
 import { ListeningPage } from '@/pages/ListeningPage'
+import { PaperReaderPage } from '@/pages/PaperReaderPage'
+import { WriterPage } from '@/pages/WriterPage'
+import { AchievementsPage } from '@/pages/AchievementsPage'
+import { ResourcesPage } from '@/pages/ResourcesPage'
 const queryClient = new QueryClient();
 const router = createBrowserRouter([
   {
@@ -36,6 +40,26 @@ const router = createBrowserRouter([
   {
     path: "/listening",
     element: <ListeningPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/papers",
+    element: <PaperReaderPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/writer",
+    element: <WriterPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/achievements",
+    element: <AchievementsPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/resources",
+    element: <ResourcesPage />,
     errorElement: <RouteErrorBoundary />,
   }
 ]);
