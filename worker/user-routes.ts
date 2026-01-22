@@ -4,6 +4,7 @@ import { TaskEntity, StatsEntity } from './entities';
 import type { Task, UserStats } from '@shared/types';
 export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
   app.get('/api/tasks', async (c) => {
+    await TaskEntity.ensureSeed(c.env);
     const tasks = await TaskEntity.list(c.env);
     return ok(c, tasks.items);
   });

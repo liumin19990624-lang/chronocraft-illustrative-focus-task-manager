@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import {
   PenTool, Sparkles, Wand2, Zap, LayoutTemplate,
-  Settings2, Languages, SearchCode, Loader2, Bold, Italic, Quote, Link2, List
+  Settings2, Languages, SearchCode, Loader2, Bold, Italic, Quote, Link2, List, Brain
 } from 'lucide-react';
 import { WRITING_SUGGESTIONS } from '@/lib/mock-academic';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -22,7 +22,7 @@ export function WriterPage() {
   const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
   const handleTranslate = () => {
     if (spirit < 30) {
-      toast.error("精神力不足，请���作休息");
+      toast.error("精神力不足，请稍作休息");
       return;
     }
     setIsProcessing(true);
@@ -66,7 +66,7 @@ export function WriterPage() {
                 <span className="font-mono font-bold text-base text-amber-600">{spirit}%</span>
               </div>
             </div>
-            <Button className="rounded-[1.5rem] h-16 px-10 bg-purple-600 hover:bg-purple-500 font-bold shadow-2xl shadow-purple-900/20 gap-3 text-lg">
+            <Button className="rounded-[1.5rem] h-16 px-10 bg-purple-600 hover:bg-purple-50 font-bold shadow-2xl shadow-purple-900/20 gap-3 text-lg">
               <Sparkles className="h-6 w-6" /> 灵感爆发
             </Button>
           </div>
@@ -106,7 +106,7 @@ export function WriterPage() {
               <Textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="在此挥毫泼墨，开启学术篇章..."
+                placeholder="在此挥毫泼墨，开启学术篇��..."
                 className="flex-1 border-none focus-visible:ring-0 text-2xl font-medium bg-transparent p-0 placeholder:text-muted-foreground/20 resize-none leading-relaxed"
               />
               <div className="mt-10 pt-8 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-6">
@@ -171,7 +171,7 @@ export function WriterPage() {
                   <div className="h-24 w-24 rounded-full border-4 border-dashed border-muted-foreground flex items-center justify-center">
                     <PenTool className="h-10 w-10 text-muted-foreground" />
                   </div>
-                  <p className="text-lg font-display font-bold">挥毫书写，笔灵���显</p>
+                  <p className="text-lg font-display font-bold">挥毫书写，笔灵方显</p>
                 </div>
               )}
             </AnimatePresence>

@@ -82,14 +82,15 @@ export function HomePage() {
   const userStreak = userStats?.streak ?? 0;
   const hasUser = !!userNickname;
   useEffect(() => {
-    fetchStats().then(() => fetchTasks());
+    fetchStats().then(() => { if (userNickname) fetchTasks(); });
   }, [fetchTasks, fetchStats]);
   const dailyGreeting = useMemo(() => {
     const hour = new Date().getHours();
     let timeGreet = "晨光熹微";
+    const randomQuote = ACADEMIC_QUOTES[Math.floor(Math.random() * ACADEMIC_QUOTES.length)];
     if (hour >= 12 && hour < 18) timeGreet = "午后小憩";
     if (hour >= 18) timeGreet = "月下研读";
-    return `${timeGreet}，${userNickname}道友。今日你已处在第 ${userLevel} 重境界，神识清明，宜修法。`;
+    return `${timeGreet}，${userNickname}道友。今日你已处在第 ${userLevel} 重境界，神识清明，宜修法。${randomQuote}`;
   }, [userNickname, userLevel]);
   const sortedTasks = useMemo(() => {
     let filtered = tasks;
@@ -116,7 +117,7 @@ export function HomePage() {
           <FocusOverlay />
           <PWAPrompt />
           <div className={cn("transition-all duration-700 space-y-12", activeTaskId && "blur-xl opacity-40 pointer-events-none")}>
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+            <header className="flex flex-col md:flex-row md:items-start justify-between gap-8">
               <div className="flex items-center gap-6">
                 <Avatar className="h-20 w-20 rounded-3xl shadow-2xl ring-4 ring-primary/5">
                   <AvatarImage src={userStats?.avatar} />
