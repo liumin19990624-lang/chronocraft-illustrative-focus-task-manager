@@ -1,12 +1,16 @@
 import { create } from 'zustand';
-import { Task, TimerState, TimerMode } from '@/types/app-types';
-import { MOCK_TASKS } from '@/lib/mock-tasks';
+import { Task, TimerState, TimerMode, TaskStatus } from '@/types/app-types';
+import { api } from '@/lib/api-client';
 interface AppStore {
   tasks: Task[];
+  isLoading: boolean;
+  error: string | null;
   timer: TimerState;
+  fetchTasks: () => Promise<void>;
   setTasks: (tasks: Task[]) => void;
-  addTask: (task: Task) => void;
-  updateTask: (id: string, updates: Partial<Task>) => void;
+  addTask: (task: Omit<Task, 'id' | 'status' | 'pomodoroSpent' | 'tags' | 'createdAt'>) => Promise<void>;
+  updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>;
   completeTask: (id: string) => void;
   startFocus: (taskId: string) => void;
   stopFocus: () => void;
@@ -17,23 +21,71 @@ interface AppStore {
 const POMODORO_TIME = 25 * 60;
 const SHORT_BREAK = 5 * 60;
 const LONG_BREAK = 15 * 60;
-export const useAppStore = create<AppStore>((set) => ({
-  tasks: MOCK_TASKS,
+export const useAppStore = create<AppStore>((set, get) => ({
+  tasks: [],
+  isLoading: true,
+  error: null,
   timer: {
     mode: 'focus',
     timeLeft: POMODORO_TIME,
     isRunning: false,
     activeTaskId: null,
   },
+  fetchTasks: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const tasks = await api<Task[]>('/api/tasks');
+      set({ tasks, isLoading: false });
+    } catch (error) {
+      set({ error: (error as Error).message, isLoading: false });
+      console.error("Failed to fetch tasks", error);
+    }
+  },
   setTasks: (tasks) => set({ tasks }),
-  addTask: (task) => set((state) => ({ tasks: [task, ...state.tasks] })),
-  updateTask: (id, updates) => set((state) => ({
-    tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
-  })),
-  completeTask: (id) => set((state) => ({
-    tasks: state.tasks.map((t) => (t.id === id ? { ...t, status: 'completed' as const } : t)),
-    timer: state.timer.activeTaskId === id ? { ...state.timer, isRunning: false, activeTaskId: null } : state.timer
-  })),
+  addTask: async (taskData) => {
+    try {
+      const newTask = await api<Task>('/api/tasks', {
+        method: 'POST',
+        body: JSON.stringify(taskData),
+      });
+      set((state) => ({ tasks: [newTask, ...state.tasks] }));
+    } catch (error) {
+      console.error("Failed to add task:", error);
+    }
+  },
+  updateTask: async (id, updates) => {
+    const originalTasks = get().tasks;
+    set((state) => ({
+      tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+    }));
+    try {
+      await api(`/api/tasks/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates),
+      });
+    } catch (error) {
+      console.error("Failed to update task:", error);
+      set({ tasks: originalTasks }); // Rollback on error
+    }
+  },
+  deleteTask: async (id: string) => {
+    const originalTasks = get().tasks;
+    set((state) => ({
+      tasks: state.tasks.filter((t) => t.id !== id),
+    }));
+     try {
+      await api(`/api/tasks/${id}`, { method: 'DELETE' });
+    } catch (error) {
+      console.error("Failed to delete task:", error);
+      set({ tasks: originalTasks }); // Rollback on error
+    }
+  },
+  completeTask: (id) => {
+    get().updateTask(id, { status: 'completed' as TaskStatus });
+    if (get().timer.activeTaskId === id) {
+      get().stopFocus();
+    }
+  },
   startFocus: (taskId) => set((state) => ({
     timer: { ...state.timer, activeTaskId: taskId, isRunning: true, mode: 'focus', timeLeft: POMODORO_TIME }
   })),
@@ -50,9 +102,9 @@ export const useAppStore = create<AppStore>((set) => ({
     timer: { ...state.timer, isRunning: !state.timer.isRunning }
   })),
   setTimerMode: (mode) => set((state) => ({
-    timer: { 
-      ...state.timer, 
-      mode, 
+    timer: {
+      ...state.timer,
+      mode,
       timeLeft: mode === 'focus' ? POMODORO_TIME : mode === 'short-break' ? SHORT_BREAK : LONG_BREAK,
       isRunning: false
     }
