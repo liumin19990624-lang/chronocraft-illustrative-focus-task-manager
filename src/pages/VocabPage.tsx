@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { motion, AnimatePresence } from 'framer-motion';
 import { VOCAB_DATA } from '@/lib/mock-academic';
 import { useSwipeable } from 'react-swipeable';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle2, XCircle, Volume2, Sparkles, RefreshCcw, Brain, History } from 'lucide-react';
+import { CheckCircle2, XCircle, Volume2, Sparkles, Brain, History } from 'lucide-react';
 import { triggerTaskCompletionConfetti } from '@/components/ui/confetti';
 import { playSound } from '@/lib/audio';
 import { useAppStore } from '@/store/use-app-store';
@@ -39,7 +38,7 @@ export function VocabPage() {
     trackMouse: true
   });
   return (
-    <AppLayout container contentClassName="min-h-screen bg-[#0F172A] text-slate-100 overflow-hidden">
+    <div className="min-h-screen bg-[#0F172A] text-slate-100 overflow-hidden px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12">
       <div className="max-w-md mx-auto space-y-8 py-10">
         <header className="space-y-4">
           <div className="flex justify-between items-end">
@@ -96,7 +95,7 @@ export function VocabPage() {
                       <p className="text-3xl font-bold text-white">{currentWord.definition}</p>
                     </div>
                     <div className="space-y-2 bg-slate-800/40 p-4 rounded-2xl border border-slate-700/50">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">艾宾��斯建议 (Memory Tip)</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400">艾宾浩斯建议 (Memory Tip)</span>
                       <p className="text-sm text-slate-300 leading-relaxed italic">{currentWord.mnemonic}</p>
                     </div>
                     <div className="space-y-2">
@@ -129,6 +128,6 @@ export function VocabPage() {
           </Button>
         </div>
       </div>
-    </AppLayout>
+    </div>
   );
 }

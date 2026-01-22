@@ -12,6 +12,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import '@/index.css'
+import { AppLayout } from '@/components/layout/AppLayout'
 import { HomePage } from '@/pages/HomePage'
 import { StatsPage } from '@/pages/StatsPage'
 import { VocabPage } from '@/pages/VocabPage'
@@ -26,53 +27,50 @@ const queryClient = new QueryClient();
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <HomePage />,
+    element: <AppLayout />,
     errorElement: <RouteErrorBoundary />,
-  },
-  {
-    path: "/stats",
-    element: <StatsPage />,
-    errorElement: <RouteErrorBoundary />,
-  },
-  {
-    path: "/vocab",
-    element: <VocabPage />,
-    errorElement: <RouteErrorBoundary />,
-  },
-  {
-    path: "/listening",
-    element: <ListeningPage />,
-    errorElement: <RouteErrorBoundary />,
-  },
-  {
-    path: "/papers",
-    element: <PaperReaderPage />,
-    errorElement: <RouteErrorBoundary />,
-  },
-  {
-    path: "/writer",
-    element: <WriterPage />,
-    errorElement: <RouteErrorBoundary />,
-  },
-  {
-    path: "/achievements",
-    element: <AchievementsPage />,
-    errorElement: <RouteErrorBoundary />,
-  },
-  {
-    path: "/resources",
-    element: <ResourcesPage />,
-    errorElement: <RouteErrorBoundary />,
-  },
-  {
-    path: "/community",
-    element: <CommunityPage />,
-    errorElement: <RouteErrorBoundary />,
-  },
-  {
-    path: "/settings",
-    element: <SettingsPage />,
-    errorElement: <RouteErrorBoundary />,
+    children: [
+      {
+        index: true,
+        element: <HomePage />,
+      },
+      {
+        path: "stats",
+        element: <StatsPage />,
+      },
+      {
+        path: "vocab",
+        element: <VocabPage />,
+      },
+      {
+        path: "listening",
+        element: <ListeningPage />,
+      },
+      {
+        path: "papers",
+        element: <PaperReaderPage />,
+      },
+      {
+        path: "writer",
+        element: <WriterPage />,
+      },
+      {
+        path: "achievements",
+        element: <AchievementsPage />,
+      },
+      {
+        path: "resources",
+        element: <ResourcesPage />,
+      },
+      {
+        path: "community",
+        element: <CommunityPage />,
+      },
+      {
+        path: "settings",
+        element: <SettingsPage />,
+      }
+    ]
   }
 ]);
 createRoot(document.getElementById('root')!).render(

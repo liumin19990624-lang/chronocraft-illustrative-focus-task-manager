@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { Task, TimerState, TimerMode, UserStats, SocialPost, UserSettings, AiAssistantResult, AiTaskType } from '@shared/types';
 import { api } from '@/lib/api-client';
-import { isYesterday, isToday, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { MOCK_AI_RESPONSES, ACHIEVEMENT_LIST } from '@/lib/mock-academic';
 interface AppStore {
@@ -30,6 +29,7 @@ interface AppStore {
   toggleTimer: () => void;
   setTimerMode: (mode: TimerMode) => void;
   setDistracted: (distracted: boolean) => void;
+  drainSpirit: (amount: number) => void;
   awardRewards: (xp: number, coins: number) => void;
   requestAiAssistant: (text: string, type: AiTaskType) => Promise<AiAssistantResult>;
   completePomodoro: () => Promise<void>;
@@ -44,7 +44,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   isLoading: true,
   error: null,
   showArchived: false,
-  timer: { mode: 'focus', timeLeft: POMODORO_TIME, isRunning: false, activeTaskId: null, isPaused: false, isDistracted: false },
+  timer: { mode: 'focus', timeLeft: POMODORO_TIME, isRunning: false, activeTaskId: null, isPaused: false, isDistracted: false, spiritHealth: 100 },
   initUser: (nickname: string) => {
     const newUser: UserStats = {
       id: crypto.randomUUID(), nickname, avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${nickname}`,
@@ -69,14 +69,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
       try { localStats = JSON.parse(localUserStr); } catch (e) { console.error(e); }
     }
     try {
-      const remote = await api<UserStats>(`/api/stats?userId=${localStats?.id || 'me'}`);
-      // Deep merge logic to prevent data loss
+      const remote = await api<UserStats>(`/api/stats?userId={localStats?.id || 'me'}`);
       const merged = { ...localStats, ...remote, settings: { ...localStats?.settings, ...remote.settings } };
       set({ userStats: merged });
       localStorage.setItem('xian_user', JSON.stringify(merged));
     } catch (e) {
       if (localStats) set({ userStats: localStats });
-      console.warn("[CONSOLE] Local state active, sync deferred", e);
     }
     set({ isLoading: false });
   },
@@ -148,10 +146,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     if (task) {
       const newSpent = task.pomodoroSpent + 1;
       await get().updateTask(task.id, { pomodoroSpent: newSpent });
-      // Calculate reward based on spirit/quality (mocked 100 here for simplicity)
-      const xpReward = 100;
-      const coinReward = 20;
-      await get().awardRewards(xpReward, coinReward);
+      const spiritBonus = Math.floor(timer.spiritHealth / 10);
+      await get().awardRewards(100 + spiritBonus * 10, 20 + spiritBonus);
       if (userStats) {
         const updatedStats = { ...userStats, totalFocusMinutes: userStats.totalFocusMinutes + 25 };
         set({ userStats: updatedStats });
@@ -161,11 +157,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
     get().stopFocus();
   },
   checkAchievements: () => {
-    const { userStats, tasks } = get();
+    const { userStats } = get();
     if (!userStats) return;
     const currentUnlocked = userStats.unlockedAchievements;
     const newUnlocks: string[] = [];
-    // Simple logic checks
     if (userStats.level >= 5 && !currentUnlocked.includes('a2')) newUnlocks.push('a2');
     if (userStats.totalTasksCompleted >= 10 && !currentUnlocked.includes('a3')) newUnlocks.push('a3');
     if (newUnlocks.length > 0) {
@@ -174,14 +169,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
       localStorage.setItem('xian_user', JSON.stringify(updated));
       newUnlocks.forEach(id => {
         const ach = ACHIEVEMENT_LIST.find(a => a.id === id);
-        if (ach) toast.success(`��就解锁: ${ach.name}`, { description: ach.description });
+        if (ach) toast.success(`成就解锁: ${ach.name}`, { description: ach.description });
       });
     }
   },
   requestAiAssistant: async (text, type) => {
     return new Promise((resolve) => {
       setTimeout(() => {
-        const responseContent = MOCK_AI_RESPONSES[type] || "笔��由于法力不支，未能给出回应。";
+        const responseContent = MOCK_AI_RESPONSES[type] || "笔灵由于法力不支，未能给出回应。";
         const result: AiAssistantResult = {
           taskId: crypto.randomUUID(),
           type,
@@ -189,7 +184,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
           originalText: text,
           metadata: type === 'evaluate' ? {
             score: { grammar: 92, logic: 95, originality: 98 },
-            suggestions: ["逻辑严密", "原创度高"]
+            suggestions: ["逻��严密", "原创度高"]
           } : undefined
         };
         resolve(result);
@@ -197,13 +192,20 @@ export const useAppStore = create<AppStore>((set, get) => ({
     });
   },
   toggleShowArchived: () => set(s => ({ showArchived: !s.showArchived })),
-  startFocus: (taskId) => set(s => ({ timer: { ...s.timer, activeTaskId: taskId, isRunning: true, isPaused: false, mode: 'focus', timeLeft: POMODORO_TIME, isDistracted: false } })),
+  startFocus: (taskId) => set(s => ({ timer: { ...s.timer, activeTaskId: taskId, isRunning: true, isPaused: false, mode: 'focus', timeLeft: POMODORO_TIME, isDistracted: false, spiritHealth: 100 } })),
   stopFocus: () => set(s => ({ timer: { ...s.timer, isRunning: false, activeTaskId: null, timeLeft: POMODORO_TIME, isDistracted: false } })),
   tick: () => {
     const { timer } = get();
     if (!timer.isRunning || timer.isPaused || timer.timeLeft <= 0) return;
-    set(s => ({ timer: { ...s.timer, timeLeft: s.timer.timeLeft - 1 } }));
+    set(s => ({
+      timer: {
+        ...s.timer,
+        timeLeft: s.timer.timeLeft - 1,
+        spiritHealth: s.timer.mode !== 'focus' ? Math.min(100, s.timer.spiritHealth + 0.1) : s.timer.spiritHealth
+      }
+    }));
   },
+  drainSpirit: (amount) => set(s => ({ timer: { ...s.timer, spiritHealth: Math.max(0, s.timer.spiritHealth - amount) } })),
   setDistracted: (distracted) => set(s => ({ timer: { ...s.timer, isDistracted: distracted, isPaused: distracted, isRunning: !distracted } })),
   toggleTimer: () => set(s => ({ timer: { ...s.timer, isRunning: !s.timer.isRunning, isPaused: s.timer.isRunning } })),
   setTimerMode: (mode) => set(s => ({ timer: { ...s.timer, mode, timeLeft: mode === 'focus' ? POMODORO_TIME : 300, isRunning: false } }))

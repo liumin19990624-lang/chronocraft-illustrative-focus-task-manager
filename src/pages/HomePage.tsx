@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { Toaster } from '@/components/ui/sonner';
 import { TaskCard } from '@/components/task/TaskCard';
 import { CalendarWidget } from '@/components/dashboard/CalendarWidget';
 import { useAppStore } from '@/store/use-app-store';
-import { Sparkles, Plus, Trophy, Flame, Inbox, Wallet, Book, Headphones, FileText, PenTool, Bell, User } from 'lucide-react';
+import { Plus, Flame, Inbox, Wallet, Book, Headphones, FileText, PenTool, Bell, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { NewTaskDialog } from '@/components/task/NewTaskDialog';
@@ -13,7 +12,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { useShallow } from 'zustand/react/shallow';
 import { PWAPrompt } from '@/components/ui/pwa-prompt';
 import { Link } from 'react-router-dom';
@@ -102,14 +100,14 @@ export function HomePage() {
     });
   }, [tasks, showArchived]);
   const quickAccess = [
-    { name: "词汇 对战", icon: Book, color: "bg-orange-500", path: "/vocab", desc: "对战记忆术" },
+    { name: "���汇 对战", icon: Book, color: "bg-orange-500", path: "/vocab", desc: "对战记忆术" },
     { name: "听力 研习", icon: Headphones, color: "bg-blue-500", path: "/listening", desc: "精听悟道方" },
     { name: "论文 阅读", icon: FileText, color: "bg-emerald-500", path: "/papers", desc: "双栏研习社" },
-    { name: "写作 创作", icon: PenTool, color: "bg-purple-500", path: "/writer", desc: "灵感演武场" },
+    { name: "写作 ��作", icon: PenTool, color: "bg-purple-500", path: "/writer", desc: "灵感演武场" },
   ];
   if (!hasUser) return <RegisterDialog />;
   return (
-    <AppLayout className="bg-background relative">
+    <div className="bg-background relative">
       <HallParticles />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="py-8 md:py-10 lg:py-12">
@@ -123,7 +121,7 @@ export function HomePage() {
                   <AvatarFallback className="bg-primary text-primary-foreground"><User /></AvatarFallback>
                 </Avatar>
                 <div className="space-y-3">
-                  <h1 className="text-4xl font-display font-bold tracking-tight">学术大厅</h1>
+                  <h1 className="text-4xl font-display font-bold tracking-tight">学术���厅</h1>
                   <p className="text-muted-foreground font-medium text-lg">{dailyGreeting}</p>
                   <div className="w-full max-w-xs space-y-1.5">
                     <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
@@ -173,9 +171,9 @@ export function HomePage() {
               <section className="lg:col-span-8 space-y-10">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <h2 className="text-3xl font-display font-bold">待办��务 (Quests)</h2>
+                    <h2 className="text-3xl font-display font-bold">待办任务 (Quests)</h2>
                     <Button variant="ghost" size="sm" onClick={toggleShowArchived} className="rounded-xl text-xs font-bold uppercase tracking-widest">
-                      {showArchived ? "隐��" : "查看归档"}
+                      {showArchived ? "隐藏" : "查���归档"}
                     </Button>
                   </div>
                   <NewTaskDialog>
@@ -202,9 +200,8 @@ export function HomePage() {
               </aside>
             </main>
           </div>
-          <Toaster richColors position="top-center" />
         </div>
       </div>
-    </AppLayout>
+    </div>
   );
 }

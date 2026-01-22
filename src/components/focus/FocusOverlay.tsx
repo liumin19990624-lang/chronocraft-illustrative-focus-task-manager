@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '@/store/use-app-store';
 import { Button } from '@/components/ui/button';
@@ -13,18 +13,18 @@ import { useShallow } from 'zustand/react/shallow';
 export function FocusOverlay() {
   const activeTaskId = useAppStore(s => s.timer.activeTaskId);
   const isRunning = useAppStore(s => s.timer.isRunning);
-  const isPaused = useAppStore(s => s.timer.isPaused);
-  const isDistracted = useAppStore(s => s.timer.isDistracted);
   const timeLeft = useAppStore(s => s.timer.timeLeft);
   const mode = useAppStore(s => s.timer.mode);
+  const spiritHealth = useAppStore(s => s.timer.spiritHealth);
+  const isDistracted = useAppStore(s => s.timer.isDistracted);
   const tasks = useAppStore(useShallow(s => s.tasks));
   const tick = useAppStore(s => s.tick);
   const toggleTimer = useAppStore(s => s.toggleTimer);
   const stopFocus = useAppStore(s => s.stopFocus);
   const setDistracted = useAppStore(s => s.setDistracted);
+  const drainSpirit = useAppStore(s => s.drainSpirit);
   const completePomodoro = useAppStore(s => s.completePomodoro);
   const userStats = useAppStore(s => s.userStats);
-  const [spiritHealth, setSpiritHealth] = useState(100);
   const hiddenTimeRef = useRef<number | null>(null);
   const activeTask = useMemo(() => tasks.find(t => t.id === activeTaskId), [tasks, activeTaskId]);
   useEffect(() => {
@@ -35,35 +35,31 @@ export function FocusOverlay() {
         const diff = (Date.now() - hiddenTimeRef.current) / 1000;
         if (diff > 15 && isRunning && mode === 'focus') {
           setDistracted(true);
-          setSpiritHealth(prev => Math.max(0, prev - 25));
+          drainSpirit(25);
           playSound('click');
-          toast.warning("道心不���！", { description: "离开过久，损耗了 25% 的专注元气。" });
+          toast.warning("道心不稳！", { description: "离开过久，损耗了 25% 的专注元气。" });
         }
         hiddenTimeRef.current = null;
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [isRunning, mode, setDistracted]);
-  // Tick & Recovery Logic
+  }, [isRunning, mode, setDistracted, drainSpirit]);
   useEffect(() => {
     let interval: any;
     if (isRunning && activeTaskId) {
       interval = setInterval(() => {
         tick();
-        if (mode !== 'focus') {
-          setSpiritHealth(prev => Math.min(100, prev + 0.5));
-        }
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isRunning, activeTaskId, tick, mode]);
+  }, [isRunning, activeTaskId, tick]);
   useEffect(() => {
     if (timeLeft === 0 && activeTaskId && isRunning) {
       playSound('ding');
       triggerConfetti();
       completePomodoro();
-      toast.success("潜修圆���！", { description: "周天运行完毕，神识获得洗礼。" });
+      toast.success("潜修圆满！", { description: "周天运行完毕，神识获得洗礼。" });
     }
   }, [timeLeft, activeTaskId, isRunning, completePomodoro]);
   if (!activeTaskId) return null;
@@ -80,7 +76,7 @@ export function FocusOverlay() {
               opacity: isRunning ? [0.1, 0.15, 0.1] : 0.05
             }}
             transition={{ duration: 10, repeat: Infinity }}
-            className={cn("absolute inset-0 blur-[120px] bg-gradient-radial from-primary/20 to-transparent", 
+            className={cn("absolute inset-0 blur-[120px] bg-gradient-radial from-primary/20 to-transparent",
               spiritHealth < 30 && "from-red-500/10")}
           />
         </div>
@@ -100,7 +96,7 @@ export function FocusOverlay() {
           <div className="flex items-center gap-4">
             <div className="bg-secondary/50 px-6 py-2 rounded-2xl border border-border/50 backdrop-blur-md">
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">当前境界</p>
-              <p className="font-display font-bold text-sm">第 {userStats?.level || 1} 重境界</p>
+              <p className="font-display font-bold text-sm">第 {userStats?.level || 1} ��境界</p>
             </div>
             <Button variant="ghost" size="icon" className="h-14 w-14 rounded-full bg-secondary/50" onClick={stopFocus}><X className="h-6 w-6" /></Button>
           </div>
@@ -109,7 +105,7 @@ export function FocusOverlay() {
           <div className="space-y-6">
             <Badge className={cn("px-10 py-2.5 text-xs rounded-full font-bold uppercase tracking-[0.3em] shadow-xl",
               isDistracted ? "bg-amber-500 animate-pulse" : isRunning ? "bg-primary" : "bg-muted text-muted-foreground")}>
-              {isDistracted ? "道心入魔 · 已走神" : isRunning ? "深度潜修中" : "入定中"}
+              {isDistracted ? "道心入魔 · ���走神" : isRunning ? "深度潜修中" : "入定中"}
             </Badge>
             <h2 className="text-7xl font-display font-bold tracking-tight px-4 bg-clip-text text-transparent bg-gradient-to-b from-foreground to-foreground/60">
               {activeTask?.title}
@@ -132,7 +128,7 @@ export function FocusOverlay() {
                   <Ghost className="h-24 w-24 text-amber-500 mx-auto animate-float" />
                   <div className="space-y-2">
                     <p className="text-4xl font-display font-bold">杂念丛生</p>
-                    <p className="text-muted-foreground font-medium">道心出现裂缝���请速速归位。</p>
+                    <p className="text-muted-foreground font-medium">道心出现��缝，请速速归位。</p>
                   </div>
                   <Button size="lg" className="rounded-3xl h-16 px-16 text-xl font-bold bg-amber-500 hover:bg-amber-600" onClick={() => setDistracted(false)}>重拾道心</Button>
                 </div>
@@ -157,7 +153,7 @@ export function FocusOverlay() {
             <span className="px-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">沉浸环境音</span>
           </div>
           <motion.div animate={{ opacity: [0.3, 0.6, 0.3] }} transition={{ duration: 5, repeat: Infinity }} className="text-muted-foreground italic text-xl font-display max-w-2xl mx-auto text-center">
-            “静以修身���俭以养德。非淡泊无以明志，非宁静无以致远。��
+            “静以修身，俭以养德。非淡泊���以明志，非宁静无以致远。”
           </motion.div>
         </div>
       </motion.div>

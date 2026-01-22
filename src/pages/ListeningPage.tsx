@@ -1,10 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { LISTENING_DATA } from '@/lib/mock-academic';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Play, Pause, RotateCcw, Mic, SkipForward, FastForward, Info, BookOpen, Repeat, StickyNote } from 'lucide-react';
+import { Play, Pause, RotateCcw, Mic, SkipForward, BookOpen, Repeat, StickyNote, Info } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -19,16 +18,16 @@ export function ListeningPage() {
     return LISTENING_DATA[activeSentence].amplitude.map((val, i) => ({ x: i, y: val }));
   }, [activeSentence]);
   const handleMic = (index: number) => {
-    toast.info("正在分析发音...", { duration: 1500 });
+    toast.info("正在分析���音...", { duration: 1500 });
     setTimeout(() => {
       const score = Math.floor(Math.random() * (99 - 80 + 1) + 80);
       setScores(prev => ({ ...prev, [index]: score }));
-      toast.success(`识别成功：相似度 ${score}%`, { description: "发音圆润，神识通达！" });
+      toast.success(`识别成功：��似度 ${score}%`, { description: "发音圆润，神识通达！" });
     }, 1500);
   };
   return (
-    <AppLayout container contentClassName="bg-[#0F172A] text-slate-100">
-      <div className="max-w-6xl mx-auto py-10">
+    <div className="bg-[#0F172A] text-slate-100 min-h-screen px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12">
+      <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-8 space-y-10">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -39,7 +38,7 @@ export function ListeningPage() {
                     Level: C1 Academic
                   </Badge>
                 </div>
-                <p className="text-slate-400 text-sm font-medium">AI辅助分���精听，当前研习：《Transduction Models in AI》</p>
+                <p className="text-slate-400 text-sm font-medium">AI辅���分片精听，当前研习：��Transduction Models in AI》</p>
               </div>
               <div className="flex items-center gap-2 bg-slate-900 p-1.5 rounded-2xl border border-slate-800">
                 {[0.8, 1, 1.2, 1.5].map(s => (
@@ -141,11 +140,11 @@ export function ListeningPage() {
               <h2 className="text-xl font-display font-bold flex items-center gap-2">
                 <BookOpen className="h-5 w-5 text-blue-400" /> 精听笔录 (Study Notes)
               </h2>
-              <textarea 
+              <textarea
                 className="w-full h-80 bg-slate-800/50 rounded-2xl p-4 text-sm font-medium border-none focus:ring-1 focus:ring-blue-500 resize-none placeholder:text-slate-600"
-                placeholder="在此记录关键学术短���、生词或修行心得..."
+                placeholder="在此记录关键学术短语、生词或修行心得..."
               />
-              <Button className="w-full h-14 rounded-2xl bg-blue-600 font-bold">同步至��海</Button>
+              <Button className="w-full h-14 rounded-2xl bg-blue-600 font-bold">同步至识海</Button>
             </Card>
             <Card className="p-8 rounded-[2.5rem] bg-blue-600/5 border border-blue-500/10 space-y-4">
               <div className="flex items-center gap-2 text-blue-400">
@@ -153,12 +152,12 @@ export function ListeningPage() {
                 <span className="text-xs font-bold uppercase tracking-widest">学术技巧</span>
               </div>
               <p className="text-sm text-slate-400 italic leading-relaxed">
-                “学术听力中，注��捕捉转折词如 'However' 和 'Conversely'，它们通常预示着核心论点的��现。”
+                “学术听��中，注意捕捉转折词如 'However' 和 'Conversely'，它们通常预示着核心论点的出现。”
               </p>
             </Card>
           </aside>
         </div>
       </div>
-    </AppLayout>
+    </div>
   );
 }
