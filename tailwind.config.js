@@ -11,12 +11,17 @@ export default {
   				'BlinkMacSystemFont',
   				'Segoe UI',
   				'Roboto',
-  				'sans-serif'
+  				'Inter',
+          'sans-serif'
   			],
 			display: [
-				'Inter',
+				'Playfair Display',
 				'system-ui',
 				'sans-serif'
+			],
+			sketch: [
+				'Patrick Hand',
+				'cursive'
 			],
   			mono: [
   				'JetBrains Mono',
