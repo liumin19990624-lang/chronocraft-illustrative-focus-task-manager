@@ -19,19 +19,25 @@ export function PaperReaderPage() {
   const [isAiProcessing, setIsAiProcessing] = useState(false);
   const [bubblePos, setBubblePos] = useState<{ x: number, y: number } | null>(null);
   const [selection, setSelection] = useState('');
-  const requestAi = useAppStore(s => s.requestAiAssistant);
+  const requestAiAssistant = useAppStore(s => s.requestAiAssistant);
   const readerRef = useRef<HTMLDivElement>(null);
   const handleSelectPaper = (paper: AcademicPaper) => {
     setCurrentPaper(paper);
     setViewMode('read');
+    setActiveSection('abstract');
   };
   const handleAiAction = async (text: string, type: AiTaskType) => {
     setAiPanelOpen(true);
     setIsAiProcessing(true);
     setBubblePos(null);
-    const result = await requestAi(text, type, 'mentor');
-    setAiResult(result);
-    setIsAiProcessing(false);
+    try {
+      const result = await requestAiAssistant(text, type, 'mentor');
+      setAiResult(result);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsAiProcessing(false);
+    }
   };
   const onTextSelection = useCallback(() => {
     const sel = window.getSelection();
@@ -47,6 +53,12 @@ export function PaperReaderPage() {
       setBubblePos(null);
     }
   }, []);
+  // Determine which text to show based on if we are viewing a selected paper or the sample
+  const displayTitle = currentPaper?.title || PAPER_DATA.title;
+  const displayAuthors = currentPaper?.authors || PAPER_DATA.authors;
+  const displayYear = currentPaper?.year || PAPER_DATA.year;
+  const displayAbstract = currentPaper?.abstract || PAPER_DATA.abstract;
+  const displayIntro = (currentPaper && currentPaper.id !== 'sample') ? ["AI 笔灵正在��析引言内容...", "请稍候，或使用‘通俗解释’功能获取核心要义。"] : PAPER_DATA.introduction;
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12" onMouseUp={onTextSelection}>
       <AnimatePresence mode="wait">
@@ -57,7 +69,7 @@ export function PaperReaderPage() {
                 <SearchIcon className="h-10 w-10" />
               </div>
               <h1 className="text-5xl font-display font-bold tracking-tight">藏经阁检索</h1>
-              <p className="text-muted-foreground text-lg italic">“博观而约取，厚积而���发。”</p>
+              <p className="text-muted-foreground text-lg italic">“博观而约取，厚积而薄发。”</p>
             </header>
             <PaperSearch onSelectPaper={handleSelectPaper} />
           </motion.div>
@@ -68,8 +80,8 @@ export function PaperReaderPage() {
                 <Button variant="ghost" className="mb-4 rounded-xl font-bold gap-2 pl-0 hover:bg-transparent" onClick={() => setViewMode('search')}>
                   <ArrowLeft className="h-4 w-4" /> 返回藏经阁
                 </Button>
-                <h1 className="text-4xl font-display font-bold leading-tight max-w-4xl">{currentPaper?.title || PAPER_DATA.title}</h1>
-                <p className="text-muted-foreground font-medium">{currentPaper?.authors || PAPER_DATA.authors} • {currentPaper?.year || 2024}</p>
+                <h1 className="text-4xl font-display font-bold leading-tight max-w-4xl">{displayTitle}</h1>
+                <p className="text-muted-foreground font-medium">{displayAuthors} • {displayYear}</p>
               </div>
               <div className="flex items-center gap-3 md:pt-14">
                 <Button variant="outline" size="icon" className="rounded-2xl h-12 w-12 border-primary/20"><Bookmark className="h-5 w-5" /></Button>
@@ -86,13 +98,13 @@ export function PaperReaderPage() {
                   <TabsContent value="abstract" className="mt-0">
                     <div className="prose prose-slate dark:prose-invert max-w-none">
                       <p className="text-2xl font-display italic leading-relaxed text-foreground/80 first-letter:text-5xl first-letter:font-bold first-letter:mr-1">
-                        {currentPaper?.abstract || PAPER_DATA.abstract}
+                        {displayAbstract}
                       </p>
                     </div>
                   </TabsContent>
                   <TabsContent value="intro" className="mt-0">
                     <div className="space-y-10">
-                      {PAPER_DATA.introduction.map((para, i) => (
+                      {displayIntro.map((para, i) => (
                         <div key={i} className="group relative p-6 rounded-3xl hover:bg-primary/5 transition-all">
                           <p className="text-lg leading-relaxed text-foreground/90">{para}</p>
                         </div>
@@ -153,7 +165,7 @@ export function PaperReaderPage() {
             </Button>
             <div className="w-[1px] h-4 bg-white/10" />
             <Button size="sm" variant="ghost" className="h-9 px-3 rounded-xl text-white hover:bg-white/10 text-xs font-bold gap-2" onClick={() => handleAiAction(selection, 'translate')}>
-              <Languages className="h-3.5 w-3.5 text-orange-400" /> 翻���
+              <Languages className="h-3.5 w-3.5 text-orange-400" /> 翻译
             </Button>
             <div className="w-[1px] h-4 bg-white/10" />
             <Button size="sm" variant="ghost" className="h-9 px-3 rounded-xl text-white hover:bg-white/10 text-xs font-bold" onClick={() => handleAiAction(selection, 'evaluate')}>

@@ -1,5 +1,5 @@
-export type Priority = 1 | 2 | 3 | 4; // 1: 烈火, 2: 流水, 3: 巨石, 4: 清风
-export type TaskStatus = 0 | 1 | 2 | 3; // 0: 未开始, 1: 进��中, 2: 已完成, 3: 已过期
+export type Priority = 1 | 2 | 3 | 4; // 1: 烈火 (P0), 2: 流水 (P1), 3: 巨石 (P2), 4: 清风 (P3)
+export type TaskStatus = 0 | 1 | 2 | 3; // 0: 未开始, 1: 进行��, 2: 已完成, 3: 已过期
 export type TaskType = 'reading' | 'listening' | 'writing' | 'other';
 export interface Task {
   id: string;
@@ -41,13 +41,13 @@ export interface AiAssistantResult {
   taskId: string;
   type: AiTaskType;
   content: string;
-  versions?: string[]; // Multi-scheme rewriting
+  versions?: string[]; // Multi-scheme rewriting or alternative suggestions
   originalText?: string;
   metadata?: {
     score?: {
-      grammar: number;
-      logic: number;
-      originality: number;
+      grammar?: number;
+      logic?: number;
+      originality?: number;
       innovation?: number;
     };
     suggestions?: string[];
@@ -87,7 +87,7 @@ export interface UserStats {
   lastActiveDate?: string;
   unlockedAchievements: string[];
   checkinHistory: string[];
-  focusHistory: Record<string, number>; // Date string (YYYY-MM-DD) -> Minutes
+  focusHistory: Record<string, number>; // Date string (YYYY-MM-DD) -> Focus Minutes
   lastCheckinDate?: string;
   dailyFortune?: string;
   settings: UserSettings;
