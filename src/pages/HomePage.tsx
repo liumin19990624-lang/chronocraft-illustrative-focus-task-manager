@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useShallow } from 'zustand/react/shallow';
+import { PWAPrompt } from '@/components/ui/pwa-prompt';
 export function HomePage() {
   const tasks = useAppStore(useShallow(s => s.tasks));
   const isLoading = useAppStore(s => s.isLoading);
@@ -45,6 +46,7 @@ export function HomePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 lg:py-12">
         <ThemeToggle className="fixed top-4 right-4" />
         <FocusOverlay />
+        <PWAPrompt />
         <div className={cn("transition-all duration-700", activeTaskId && "blur-xl opacity-40 pointer-events-none")}>
           <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8">
             <div className="flex items-center gap-6">
@@ -52,9 +54,9 @@ export function HomePage() {
                 <Sparkles className="h-10 w-10 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-5xl font-display font-bold tracking-tight">仙途任务</h1>
+                <h1 className="text-5xl font-display font-bold tracking-tight">仙���任务</h1>
                 <p className="text-muted-foreground font-medium text-lg mt-1">
-                  道友 <span className="text-foreground font-bold">{userNickname}</span>，今日宜潜心修道。
+                  道友 <span className="text-foreground font-bold">{userNickname}</span>，今日��潜心修道。
                 </p>
               </div>
             </div>
@@ -86,9 +88,9 @@ export function HomePage() {
             <section className="lg:col-span-8 space-y-10">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <h2 className="text-3xl font-display font-bold">法诀���组</h2>
+                  <h2 className="text-3xl font-display font-bold">法诀书组</h2>
                   <Button variant="ghost" size="sm" onClick={toggleShowArchived} className="rounded-xl text-xs font-bold uppercase tracking-widest">
-                    {showArchived ? "��藏封存" : "查看封存"}
+                    {showArchived ? "隐藏��存" : "查看封存"}
                   </Button>
                 </div>
                 <NewTaskDialog>
@@ -103,7 +105,7 @@ export function HomePage() {
                 ) : sortedTasks.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-24 bg-secondary/10 rounded-5xl border-4 border-dashed border-muted-foreground/10">
                     <Inbox className="h-16 w-16 text-muted-foreground/20 mb-4" />
-                    <p className="text-xl font-display font-bold text-muted-foreground">万法皆空，道法自然</p>
+                    <p className="text-xl font-display font-bold text-muted-foreground">万法皆空��道法自然</p>
                   </div>
                 ) : (
                   sortedTasks.map(task => <TaskCard key={task.id} task={task} />)

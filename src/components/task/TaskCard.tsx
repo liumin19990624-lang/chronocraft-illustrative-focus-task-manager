@@ -4,17 +4,18 @@ import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Play, Clock, BookOpen, Headphones, PenTool, Hash, Calendar, CheckCircle2, Archive, Flame, Waves, Mountain, Wind } from 'lucide-react';
+import { Play, Clock, BookOpen, Headphones, PenTool, Hash, Calendar, CheckCircle2, Flame, Waves, Mountain, Wind, Trash2 } from 'lucide-react';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { triggerTaskCompletionConfetti } from '@/components/ui/confetti';
 import { useAppStore } from '@/store/use-app-store';
-import { motion } from 'framer-motion';
+import { motion, useAnimation } from 'framer-motion';
 import { toast } from 'sonner';
 import { playSound } from '@/lib/audio';
+import { useSwipeable } from 'react-swipeable';
 const priorityConfig: Record<Priority, { color: string; label: string; icon: any; glow: string }> = {
   1: { color: "bg-red-500", label: "烈火红", icon: Flame, glow: "shadow-red-500/20" },
-  2: { color: "bg-blue-500", label: "流水蓝", icon: Waves, glow: "shadow-blue-500/20" },
+  2: { color: "bg-blue-500", label: "流���蓝", icon: Waves, glow: "shadow-blue-500/20" },
   3: { color: "bg-slate-400", label: "巨石灰", icon: Mountain, glow: "shadow-slate-400/20" },
   4: { color: "bg-green-500", label: "清风绿", icon: Wind, glow: "shadow-green-500/20" },
 };
@@ -22,7 +23,7 @@ const statusLabels: Record<number, string> = {
   0: '未研习',
   1: '潜修中',
   2: '已大成',
-  3: '已误���'
+  3: '已误区'
 };
 const typeIcons: Record<TaskType, React.ReactNode> = {
   reading: <BookOpen className="h-5 w-5" />,
@@ -33,27 +34,61 @@ const typeIcons: Record<TaskType, React.ReactNode> = {
 export function TaskCard({ task }: { task: Task }) {
   const completeTask = useAppStore(s => s.completeTask);
   const startFocus = useAppStore(s => s.startFocus);
+  const deleteTask = useAppStore(s => s.deleteTask);
   const activeTaskId = useAppStore(s => s.timer.activeTaskId);
   const isCompleted = task.status === 2;
   const isActive = activeTaskId === task.id;
   const PriorityIcon = priorityConfig[task.priority].icon;
-  const handleComplete = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const controls = useAnimation();
+  const handleComplete = (e?: React.MouseEvent) => {
     if (isCompleted) return;
     playSound('success');
-    triggerTaskCompletionConfetti(e.clientX, e.clientY);
+    if (e) {
+      triggerTaskCompletionConfetti(e.clientX, e.clientY);
+    } else {
+      triggerTaskCompletionConfetti(window.innerWidth / 2, window.innerHeight / 2);
+    }
     completeTask(task.id);
-    toast.success(`法诀大成: "${task.title}"`, { description: "获得 +150 修为, +50 灵石" });
+    toast.success(`法诀大成: "${task.title}"`, { description: "获得 +150 修为, +50 ���石" });
   };
+  const handlers = useSwipeable({
+    onSwipedLeft: () => {
+      if (isCompleted) return;
+      controls.start({ x: 0 });
+      toast.info("��档功能正在感悟中...", { description: "暂不支持侧滑直接归档" });
+    },
+    onSwipedRight: () => {
+      if (isCompleted) return;
+      handleComplete();
+      controls.start({ x: 0 });
+    },
+    onSwiping: (e) => {
+      if (isCompleted) return;
+      controls.set({ x: e.deltaX });
+    },
+    trackMouse: false,
+    preventScrollOnSwipe: true,
+  });
   return (
-    <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} whileHover={{ scale: 1.01 }}>
+    <motion.div 
+      layout 
+      initial={{ opacity: 0, y: 20 }} 
+      animate={controls} 
+      whileHover={{ scale: 1.01 }}
+      {...handlers}
+    >
       <Card className={cn(
         "group relative flex items-stretch p-0 gap-0 border-none rounded-4xl overflow-hidden transition-all duration-300 bg-card/60 backdrop-blur-xl shadow-soft",
         isCompleted && "opacity-60 grayscale-[0.5]",
         isActive && "ring-4 ring-primary/20 scale-[1.02] shadow-2xl"
       )}>
+        {/* Swipe Indicators */}
+        <div className="absolute inset-0 flex items-center justify-between px-8 pointer-events-none opacity-0 group-active:opacity-100">
+          <CheckCircle2 className="text-emerald-500 h-8 w-8" />
+          <Trash2 className="text-destructive h-8 w-8" />
+        </div>
         <div className={cn("w-3 shrink-0", priorityConfig[task.priority].color)} />
-        <div className="flex-1 flex flex-col md:flex-row items-center p-8 gap-8">
+        <div className="flex-1 flex flex-col md:flex-row items-center p-8 gap-8 bg-inherit relative z-10">
           <div className={cn(
             "h-16 w-16 rounded-3xl flex items-center justify-center shrink-0 transition-transform group-hover:rotate-12 shadow-lg",
             isCompleted ? "bg-emerald-100 text-emerald-600" : "bg-primary/10 text-primary"
@@ -82,11 +117,11 @@ export function TaskCard({ task }: { task: Task }) {
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
-                <span>{task.pomodoroSpent} / {task.pomodoroEstimate} 灵力周转</span>
+                <span>{task.pomodoroSpent} / {task.pomodoroEstimate} 灵力���转</span>
               </div>
             </div>
             <div className="h-2 w-full bg-secondary/50 rounded-full overflow-hidden shadow-inner">
-              <motion.div 
+              <motion.div
                 className={cn("h-full rounded-full shadow-lg", isCompleted ? "bg-emerald-500" : "bg-primary")}
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min(100, (task.pomodoroSpent / task.pomodoroEstimate) * 100)}%` }}
@@ -99,8 +134,8 @@ export function TaskCard({ task }: { task: Task }) {
                 <Play className="h-8 w-8 fill-current" />
               </Button>
             )}
-            <button 
-              onClick={handleComplete} 
+            <button
+              onClick={(e) => handleComplete(e)}
               disabled={isCompleted}
               className={cn(
                 "h-16 w-16 rounded-3xl border-2 flex items-center justify-center transition-all",
