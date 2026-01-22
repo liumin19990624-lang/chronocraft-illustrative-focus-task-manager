@@ -5,13 +5,13 @@ import { LayoutDashboard, Target, Trophy, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 export function MobileNav() {
   const navItems = [
-    { label: "大厅", icon: LayoutDashboard, path: "/" },
-    { label: "任务", icon: Target, path: "/stats" },
-    { label: "成就", icon: Trophy, path: "/achievements" },
-    { label: "资料", icon: BookOpen, path: "/resources" },
+    { label: "大厅", icon: LayoutDashboard, path: "/", hasNotif: false },
+    { label: "任务", icon: Target, path: "/stats", hasNotif: true },
+    { label: "成就", icon: Trophy, path: "/achievements", hasNotif: true },
+    { label: "资料", icon: BookOpen, path: "/resources", hasNotif: false },
   ];
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background/80 backdrop-blur-2xl border-t border-border/50 px-4 py-3 pb-8">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background/70 backdrop-blur-2xl border-t border-border/50 px-4 py-3 pb-8">
       <div className="flex items-center justify-around max-w-lg mx-auto">
         {navItems.map((item) => (
           <NavLink
@@ -24,7 +24,12 @@ export function MobileNav() {
           >
             {({ isActive }) => (
               <>
-                <item.icon className={cn("h-6 w-6", isActive && "fill-primary/10")} />
+                <div className="relative">
+                  <item.icon className={cn("h-6 w-6 transition-all", isActive && "fill-primary/10")} />
+                  {item.hasNotif && (
+                    <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-red-500 border-2 border-background rounded-full animate-notification-pulse" />
+                  )}
+                </div>
                 <span className="text-[10px] font-bold uppercase tracking-widest">{item.label}</span>
                 {isActive && (
                   <motion.div

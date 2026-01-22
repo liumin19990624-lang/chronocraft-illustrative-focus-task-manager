@@ -1,22 +1,72 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { Toaster } from '@/components/ui/sonner';
 import { TaskCard } from '@/components/task/TaskCard';
 import { CalendarWidget } from '@/components/dashboard/CalendarWidget';
 import { FocusOverlay } from '@/components/focus/FocusOverlay';
 import { useAppStore } from '@/store/use-app-store';
-import { Sparkles, Plus, Trophy, Flame, Inbox, Wallet, Book, Headphones, FileText, PenTool, Brain, ChevronRight } from 'lucide-react';
+import { Sparkles, Plus, Trophy, Flame, Inbox, Wallet, Book, Headphones, FileText, PenTool, Brain, ChevronRight, Bell, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { NewTaskDialog } from '@/components/task/NewTaskDialog';
 import { RegisterDialog } from '@/components/registration/RegisterDialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useShallow } from 'zustand/react/shallow';
 import { PWAPrompt } from '@/components/ui/pwa-prompt';
 import { Link } from 'react-router-dom';
 import { ACADEMIC_QUOTES } from '@/lib/mock-academic';
+function HallParticles() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    let animationFrameId: number;
+    let particles: Array<{ x: number; y: number; vx: number; vy: number; size: number; color: string }> = [];
+    const colors = ['#88C0D0', '#EBCB8B', '#A3BE8C', '#B48EAD'];
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    window.addEventListener('resize', resize);
+    resize();
+    for (let i = 0; i < 40; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        size: Math.random() * 3 + 1,
+        color: colors[Math.floor(Math.random() * colors.length)]
+      });
+    }
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = 0.2;
+        ctx.fill();
+      });
+      animationFrameId = requestAnimationFrame(animate);
+    };
+    animate();
+    return () => {
+      window.removeEventListener('resize', resize);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0 opacity-50 hall-particles" />;
+}
 export function HomePage() {
   const tasks = useAppStore(useShallow(s => s.tasks));
   const isLoading = useAppStore(s => s.isLoading);
@@ -34,12 +84,13 @@ export function HomePage() {
   useEffect(() => {
     fetchStats().then(() => fetchTasks());
   }, [fetchTasks, fetchStats]);
-  const randomQuote = useMemo(() => {
-    return ACADEMIC_QUOTES[Math.floor(Math.random() * ACADEMIC_QUOTES.length)];
-  }, []);
-  const completedToday = useMemo(() => {
-    return tasks.filter(t => t.status === 2 && t.completedAt && new Date(t.completedAt).toDateString() === new Date().toDateString()).length;
-  }, [tasks]);
+  const dailyGreeting = useMemo(() => {
+    const hour = new Date().getHours();
+    let timeGreet = "晨光熹微";
+    if (hour >= 12 && hour < 18) timeGreet = "午后小憩";
+    if (hour >= 18) timeGreet = "月下研读";
+    return `${timeGreet}，${userNickname}道友。今日你已处在第 ${userLevel} 重境界，神识清明，宜修法。`;
+  }, [userNickname, userLevel]);
   const sortedTasks = useMemo(() => {
     let filtered = tasks;
     if (!showArchived) filtered = tasks.filter(t => !t.isArchived);
@@ -51,32 +102,32 @@ export function HomePage() {
   }, [tasks, showArchived]);
   const quickAccess = [
     { name: "词汇 对战", icon: Book, color: "bg-orange-500", path: "/vocab", desc: "对战记忆术" },
-    { name: "听力 研习", icon: Headphones, color: "bg-blue-500", path: "/listening", desc: "精听悟道台" },
+    { name: "听力 研习", icon: Headphones, color: "bg-blue-500", path: "/listening", desc: "精听悟道��" },
     { name: "论文 阅读", icon: FileText, color: "bg-emerald-500", path: "/papers", desc: "双栏研习社" },
-    { name: "写作 创作", icon: PenTool, color: "bg-purple-500", path: "/writer", desc: "灵感演武场" },
+    { name: "写作 ��作", icon: PenTool, color: "bg-purple-500", path: "/writer", desc: "灵感演武场" },
   ];
   if (!hasUser) return <RegisterDialog />;
   return (
-    <AppLayout className="bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <AppLayout className="bg-background relative">
+      <HallParticles />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="py-8 md:py-10 lg:py-12">
           <ThemeToggle className="fixed top-4 right-4" />
           <FocusOverlay />
           <PWAPrompt />
           <div className={cn("transition-all duration-700 space-y-12", activeTaskId && "blur-xl opacity-40 pointer-events-none")}>
-            <header className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-8">
               <div className="flex items-center gap-6">
-                <div className="h-20 w-20 rounded-3xl bg-primary flex items-center justify-center shadow-2xl shadow-primary/20 rotate-[-4deg]">
-                  <Sparkles className="h-10 w-10 text-primary-foreground" />
-                </div>
+                <Avatar className="h-20 w-20 rounded-3xl shadow-2xl ring-4 ring-primary/5">
+                  <AvatarImage src={userStats?.avatar} />
+                  <AvatarFallback className="bg-primary text-primary-foreground"><User /></AvatarFallback>
+                </Avatar>
                 <div>
-                  <h1 className="text-5xl font-display font-bold tracking-tight">学术大厅</h1>
-                  <p className="text-muted-foreground font-medium text-lg mt-1 italic">
-                    {randomQuote}
-                  </p>
+                  <h1 className="text-4xl font-display font-bold tracking-tight">学术大厅</h1>
+                  <p className="text-muted-foreground font-medium text-lg mt-1">{dailyGreeting}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-4 bg-secondary/30 p-2 rounded-[2.5rem] border border-border/50 shadow-inner">
+              <div className="flex items-center gap-4 bg-card/40 backdrop-blur-xl p-2 rounded-[2.5rem] border border-border/50 shadow-soft">
                 <div className="px-6 py-3 border-r border-border/50 flex items-center gap-3">
                   <Flame className="h-6 w-6 text-orange-500" />
                   <div>
@@ -85,25 +136,22 @@ export function HomePage() {
                   </div>
                 </div>
                 <div className="px-6 py-3 border-r border-border/50 flex items-center gap-3">
-                  <Trophy className="h-6 w-6 text-yellow-500" />
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">境界</p>
-                    <p className="font-display font-bold text-xl">{userLevel} 重</p>
-                  </div>
-                </div>
-                <div className="px-6 py-3 flex items-center gap-3">
                   <Wallet className="h-6 w-6 text-emerald-500" />
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">灵石</p>
                     <p className="font-display font-bold text-xl">{userCoins}</p>
                   </div>
                 </div>
+                <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full relative ml-2">
+                  <Bell className="h-6 w-6" />
+                  <span className="absolute top-2 right-2 h-3 w-3 bg-red-500 border-2 border-white rounded-full animate-pulse" />
+                </Button>
               </div>
             </header>
             <section className="grid grid-cols-2 lg:grid-cols-4 gap-6">
               {quickAccess.map((item) => (
                 <Link key={item.path} to={item.path} className="block group">
-                  <Card className="relative overflow-hidden p-8 rounded-[2.5rem] border-none bg-slate-100 dark:bg-slate-900 shadow-soft group-hover:scale-[1.02] transition-all cursor-pointer h-full">
+                  <Card className="relative overflow-hidden p-8 rounded-[2.5rem] border-none bg-card/60 backdrop-blur-xl shadow-soft group-hover:translate-y-[-4px] transition-all cursor-pointer h-full">
                     <div className={cn("absolute top-0 right-0 w-32 h-32 -mr-12 -mt-12 rounded-full opacity-10 group-hover:scale-150 transition-transform", item.color)} />
                     <div className={cn("h-16 w-16 rounded-3xl flex items-center justify-center mb-6 text-white shadow-lg", item.color)}>
                       <item.icon className="h-8 w-8" />
@@ -114,31 +162,11 @@ export function HomePage() {
                 </Link>
               ))}
             </section>
-            {completedToday > 0 && (
-              <section>
-                <Link to="/stats">
-                  <Card className="p-8 rounded-[2.5rem] bg-slate-900 text-white border-none shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 group hover:bg-slate-800 transition-colors">
-                    <div className="flex items-center gap-6">
-                      <div className="h-16 w-16 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20">
-                        <Brain className="h-8 w-8 text-orange-400" />
-                      </div>
-                      <div>
-                        <h2 className="text-2xl font-display font-bold">今日修行小��</h2>
-                        <p className="text-slate-400 font-medium">今日已圆满 {completedToday} 项法诀，道心愈发坚固。</p>
-                      </div>
-                    </div>
-                    <Button variant="ghost" className="rounded-xl font-bold text-white hover:bg-white/10 gap-2">
-                      查看详细���盘 <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </Card>
-                </Link>
-              </section>
-            )}
             <main className="grid grid-cols-1 lg:grid-cols-12 gap-12">
               <section className="lg:col-span-8 space-y-10">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <h2 className="text-3xl font-display font-bold">待办任务 (Quests)</h2>
+                    <h2 className="text-3xl font-display font-bold">待办任��� (Quests)</h2>
                     <Button variant="ghost" size="sm" onClick={toggleShowArchived} className="rounded-xl text-xs font-bold uppercase tracking-widest">
                       {showArchived ? "隐藏" : "查看归档"}
                     </Button>
