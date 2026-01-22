@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { ok, bad, notFound, Env } from './core-utils';
 import { TaskEntity, StatsEntity } from './entities';
 import type { Task, UserStats, SocialPost } from '@shared/types';
+import { MOCK_SEARCH_RESULTS } from '../src/lib/mock-academic';
 export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
   app.get('/api/tasks', async (c) => {
     await TaskEntity.ensureSeed(c.env);
@@ -38,13 +39,23 @@ export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
     const stats = await entity.mutate(s => ({ ...s, ...updates }));
     return ok(c, stats);
   });
+  // Academic Search
+  app.get('/api/papers/search', async (c) => {
+    const query = c.req.query('q')?.toLowerCase() || '';
+    if (!query) return ok(c, MOCK_SEARCH_RESULTS);
+    const filtered = MOCK_SEARCH_RESULTS.filter(p => 
+      p.title.toLowerCase().includes(query) || 
+      p.authors.toLowerCase().includes(query) ||
+      p.tags.some(t => t.toLowerCase().includes(query))
+    );
+    return ok(c, filtered);
+  });
   // Mock Community Data
   const MOCK_POSTS: SocialPost[] = [
-    { id: 'p1', userId: 'u1', userName: '���术大圣', userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=monk', content: '今日参悟了 Transformer 架构，多头注意力机制妙不可言！', likes: 24, comments: 5, createdAt: new Date().toISOString(), category: 'dynamics', tags: ['学术'] },
-    { id: 'p2', userId: 'u2', userName: '炼语书生', userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=scholar', content: '坚持精听 30 天，终于���不看字幕的情况下听懂了 Nature 的学术报告。', likes: 42, comments: 12, createdAt: new Date().toISOString(), category: 'dynamics', tags: ['坚持'] }
+    { id: 'p1', userId: 'u1', userName: '学术大圣', userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=monk', content: '今日参悟了 Transformer 架构，多头注意力机制妙不���言！', likes: 24, comments: 5, createdAt: new Date().toISOString(), category: 'dynamics', tags: ['学术'] },
+    { id: 'p2', userId: 'u2', userName: '炼语书生', userAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=scholar', content: '坚持��听 30 天，终于在不看字���的情况下听懂了 Nature 的学术报告。', likes: 42, comments: 12, createdAt: new Date().toISOString(), category: 'dynamics', tags: ['坚持'] }
   ];
   app.get('/api/community', async (c) => {
-    // In a real app, this would be a separate IndexedEntity
     return ok(c, MOCK_POSTS);
   });
   app.post('/api/community', async (c) => {
