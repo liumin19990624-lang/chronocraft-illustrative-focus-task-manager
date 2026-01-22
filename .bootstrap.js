@@ -80,7 +80,8 @@ function runSetupCommands() {
     const commands = [
     "bun add canvas-confetti@^1.9.3",
     "bun add @fontsource/playfair-display@^5.0.23",
-    "bun add @fontsource/patrick-hand@^5.0.9"
+    "bun add @fontsource/patrick-hand@^5.0.9",
+    "bun add react-swipeable"
 ];
     
     if (commands.length === 0) {
