@@ -1,19 +1,7 @@
 import { Hono } from 'hono';
 import { ok, bad, notFound, Env, Entity, EntityStatics } from './core-utils';
-import { TaskEntity } from './entities';
+import { TaskEntity, StatsEntity } from './entities';
 import type { Task, UserStats } from '@shared/types';
-class StatsEntity extends Entity<UserStats> {
-  static readonly entityName = "stats";
-  static readonly initialState: UserStats = {
-    id: "me",
-    level: 1,
-    xp: 0,
-    streak: 0,
-    totalFocusMinutes: 0,
-    totalTasksCompleted: 0,
-    unlockedAchievements: [],
-  };
-}
 export const userRoutes = (app: Hono<{ Bindings: Env }>) => {
   app.get('/api/tasks', async (c) => {
     const tasks = await TaskEntity.list(c.env);
