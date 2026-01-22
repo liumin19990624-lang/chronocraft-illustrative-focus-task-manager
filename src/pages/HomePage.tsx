@@ -1,16 +1,18 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useCallback } from 'react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { TaskCard } from '@/components/task/TaskCard';
 import { CalendarWidget } from '@/components/dashboard/CalendarWidget';
 import { useAppStore } from '@/store/use-app-store';
-import { Plus, Flame, Inbox, Wallet, Book, Headphones, FileText, PenTool, Bell, User } from 'lucide-react';
+import { Plus, Flame, Inbox, Wallet, Book, Headphones, FileText, PenTool, Bell, User, WifiOff, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { NewTaskDialog } from '@/components/task/NewTaskDialog';
 import { RegisterDialog } from '@/components/registration/RegisterDialog';
+import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useShallow } from 'zustand/react/shallow';
 import { PWAPrompt } from '@/components/ui/pwa-prompt';
@@ -68,6 +70,8 @@ function HallParticles() {
 export function HomePage() {
   const tasks = useAppStore(useShallow(s => s.tasks));
   const isLoading = useAppStore(s => s.isLoading);
+  const isOffline = useAppStore(s => s.isOffline);
+  const isSyncing = useAppStore(s => s.isSyncing);
   const fetchTasks = useAppStore(s => s.fetchTasks);
   const fetchStats = useAppStore(s => s.fetchStats);
   const showArchived = useAppStore(s => s.showArchived);
@@ -87,7 +91,7 @@ export function HomePage() {
     let timeGreet = "晨光熹微";
     const randomQuote = ACADEMIC_QUOTES[Math.floor(Math.random() * ACADEMIC_QUOTES.length)];
     if (hour >= 12 && hour < 18) timeGreet = "午后小憩";
-    if (hour >= 18) timeGreet = "月下研读";
+    if (hour >= 18) timeGreet = "月下���读";
     return `${timeGreet}，${userNickname}道友。${randomQuote}`;
   }, [userNickname]);
   const sortedTasks = useMemo(() => {
@@ -99,16 +103,17 @@ export function HomePage() {
       return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
     });
   }, [tasks, showArchived]);
-  const quickAccess = [
-    { name: "���汇 对战", icon: Book, color: "bg-orange-500", path: "/vocab", desc: "对战记忆术" },
+  const quickAccess = useMemo(() => [
+    { name: "词汇 对战", icon: Book, color: "bg-orange-500", path: "/vocab", desc: "对战记忆术" },
     { name: "听力 研习", icon: Headphones, color: "bg-blue-500", path: "/listening", desc: "精听悟道方" },
-    { name: "论文 阅读", icon: FileText, color: "bg-emerald-500", path: "/papers", desc: "双栏研习社" },
-    { name: "写作 ��作", icon: PenTool, color: "bg-purple-500", path: "/writer", desc: "灵感演武场" },
-  ];
+    { name: "论文 阅读", icon: FileText, color: "bg-emerald-500", path: "/papers", desc: "双���研习社" },
+    { name: "写作 演作", icon: PenTool, color: "bg-purple-500", path: "/writer", desc: "灵感演武���" },
+  ], []);
   if (!hasUser) return <RegisterDialog />;
   return (
     <div className="bg-background relative">
       <HallParticles />
+      <OnboardingTour />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="py-8 md:py-10 lg:py-12">
           <ThemeToggle className="fixed top-4 right-4" />
@@ -116,12 +121,22 @@ export function HomePage() {
           <div className="space-y-12">
             <header className="flex flex-col md:flex-row md:items-start justify-between gap-8">
               <div className="flex items-center gap-6">
-                <Avatar className="h-24 w-24 rounded-3xl shadow-2xl ring-4 ring-primary/5">
-                  <AvatarImage src={userStats?.avatar} />
-                  <AvatarFallback className="bg-primary text-primary-foreground"><User /></AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar className="h-24 w-24 rounded-3xl shadow-2xl ring-4 ring-primary/5">
+                    <AvatarImage src={userStats?.avatar} />
+                    <AvatarFallback className="bg-primary text-primary-foreground"><User /></AvatarFallback>
+                  </Avatar>
+                  {isOffline && (
+                    <div className="absolute -bottom-2 -right-2 bg-amber-500 text-white p-1.5 rounded-xl shadow-lg border-2 border-background">
+                      <WifiOff className="h-4 w-4" />
+                    </div>
+                  )}
+                </div>
                 <div className="space-y-3">
-                  <h1 className="text-4xl font-display font-bold tracking-tight">学术���厅</h1>
+                  <div className="flex items-center gap-4">
+                    <h1 className="text-4xl font-display font-bold tracking-tight">学术大厅</h1>
+                    {isSyncing && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />}
+                  </div>
                   <p className="text-muted-foreground font-medium text-lg">{dailyGreeting}</p>
                   <div className="w-full max-w-xs space-y-1.5">
                     <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
@@ -173,7 +188,7 @@ export function HomePage() {
                   <div className="flex items-center gap-4">
                     <h2 className="text-3xl font-display font-bold">待办任务 (Quests)</h2>
                     <Button variant="ghost" size="sm" onClick={toggleShowArchived} className="rounded-xl text-xs font-bold uppercase tracking-widest">
-                      {showArchived ? "隐藏" : "查���归档"}
+                      {showArchived ? "隐藏" : "��看归档"}
                     </Button>
                   </div>
                   <NewTaskDialog>

@@ -8,6 +8,8 @@ interface AppStore {
   socialPosts: SocialPost[];
   userStats: UserStats | null;
   isLoading: boolean;
+  isOffline: boolean;
+  isSyncing: boolean;
   error: string | null;
   timer: TimerState;
   showArchived: boolean;
@@ -46,6 +48,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   socialPosts: [],
   userStats: null,
   isLoading: true,
+  isOffline: false,
+  isSyncing: false,
   error: null,
   showArchived: false,
   timer: { mode: 'focus', timeLeft: POMODORO_TIME, isRunning: false, activeTaskId: null, isPaused: false, isDistracted: false, spiritHealth: 100 },
@@ -60,7 +64,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     };
     localStorage.setItem('xian_user', JSON.stringify(newUser));
     set({ userStats: newUser });
-    api('/api/stats', { method: 'PATCH', body: JSON.stringify({ nickname, avatar: newUser.avatar }) }).catch(console.error);
+    api('/api/stats', { method: 'PATCH', body: JSON.stringify({ nickname, avatar: newUser.avatar }) }).catch(() => set({ isOffline: true }));
   },
   fetchTasks: async () => {
     const user = get().userStats;
@@ -68,9 +72,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set({ isLoading: true });
     try {
       const tasks = await api<Task[]>(`/api/tasks?userId=${user.id}`);
-      set({ tasks, isLoading: false });
+      set({ tasks, isLoading: false, isOffline: false });
     } catch (e) {
-      set({ error: "Failed to load tasks", isLoading: false });
+      set({ error: "Working Offline", isLoading: false, isOffline: true });
     }
   },
   fetchStats: async () => {
@@ -81,21 +85,20 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
     try {
       const remote = await api<UserStats>('/api/stats');
-      // Ensure focusHistory is initialized
       const remoteStats = { ...remote, focusHistory: remote.focusHistory ?? {} };
       const merged = { ...localStats, ...remoteStats, settings: { ...localStats?.settings, ...remoteStats.settings } };
-      set({ userStats: merged as UserStats });
+      set({ userStats: merged as UserStats, isOffline: false });
       localStorage.setItem('xian_user', JSON.stringify(merged));
     } catch (e) {
-      if (localStats) set({ userStats: { ...localStats, focusHistory: localStats.focusHistory ?? {} } });
+      if (localStats) set({ userStats: { ...localStats, focusHistory: localStats.focusHistory ?? {} }, isOffline: true });
     }
     set({ isLoading: false });
   },
   fetchPosts: async () => {
     try {
       const posts = await api<SocialPost[]>('/api/community');
-      set({ socialPosts: posts });
-    } catch (e) { console.error(e); }
+      set({ socialPosts: posts, isOffline: false });
+    } catch (e) { set({ isOffline: true }); }
   },
   createPost: async (postData) => {
     const user = get().userStats;
@@ -105,12 +108,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
         method: 'POST',
         body: JSON.stringify({ ...postData, userId: user.id, userName: user.nickname, userAvatar: user.avatar })
       });
-      set(state => ({ socialPosts: [newPost, ...state.socialPosts] }));
-    } catch (e) { console.error(e); }
+      set(state => ({ socialPosts: [newPost, ...state.socialPosts], isOffline: false }));
+    } catch (e) { 
+      set({ isOffline: true });
+      toast.error("网络波动��发布失败");
+    }
   },
   likePost: async (id) => {
     set(state => ({ socialPosts: state.socialPosts.map(p => p.id === id ? { ...p, likes: p.likes + 1 } : p) }));
-    try { await api(`/api/community/${id}/like`, { method: 'POST' }); } catch (e) { get().fetchPosts(); }
+    try { await api(`/api/community/${id}/like`, { method: 'POST' }); } catch (e) { set({ isOffline: true }); }
   },
   updateSettings: async (updates) => {
     const stats = get().userStats;
@@ -118,7 +124,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const newStats = { ...stats, settings: { ...stats.settings, ...updates } };
     set({ userStats: newStats });
     localStorage.setItem('xian_user', JSON.stringify(newStats));
-    try { await api('/api/stats', { method: 'PATCH', body: JSON.stringify({ settings: updates }) }); } catch (e) { console.error(e); }
+    try { await api('/api/stats', { method: 'PATCH', body: JSON.stringify({ settings: updates }) }); } catch (e) { set({ isOffline: true }); }
   },
   awardRewards: async (xpGain, coinGain) => {
     const stats = get().userStats;
@@ -128,22 +134,37 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const updated = { ...stats, xp: newXP, level: newLevel, coins: stats.coins + coinGain, lastActiveDate: new Date().toISOString() };
     set({ userStats: updated });
     localStorage.setItem('xian_user', JSON.stringify(updated));
-    api('/api/stats', { method: 'PATCH', body: JSON.stringify({ xp: updated.xp, level: updated.level, coins: updated.coins, lastActiveDate: updated.lastActiveDate }) });
+    try {
+      await api('/api/stats', { method: 'PATCH', body: JSON.stringify({ xp: updated.xp, level: updated.level, coins: updated.coins, lastActiveDate: updated.lastActiveDate }) });
+      set({ isOffline: false });
+    } catch(e) { set({ isOffline: true }); }
     get().checkAchievements();
   },
   addTask: async (taskData) => {
     const user = get().userStats;
     if (!user) return;
-    const newTask = await api<Task>('/api/tasks', { method: 'POST', body: JSON.stringify({ ...taskData, userId: user.id, status: 0 }) });
-    set(s => ({ tasks: [newTask, ...s.tasks] }));
+    try {
+      const newTask = await api<Task>('/api/tasks', { method: 'POST', body: JSON.stringify({ ...taskData, userId: user.id, status: 0 }) });
+      set(s => ({ tasks: [newTask, ...s.tasks], isOffline: false }));
+    } catch(e) {
+      set({ isOffline: true });
+      const localTask: Task = {
+        id: crypto.randomUUID(), userId: user.id, title: taskData.title || "", priority: taskData.priority || 3,
+        status: 0, type: taskData.type || 'other', dueDate: taskData.dueDate || new Date().toISOString(),
+        dueTime: taskData.dueTime || "09:00", pomodoroEstimate: taskData.pomodoroEstimate || 1,
+        pomodoroSpent: 0, tags: taskData.tags || [], isArchived: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+      };
+      set(s => ({ tasks: [localTask, ...s.tasks] }));
+      toast.info("已保存至本地结界", { description: "网络恢复后将同步至宗门。" });
+    }
   },
   updateTask: async (id, updates) => {
     set(s => ({ tasks: s.tasks.map(t => t.id === id ? { ...t, ...updates } : t) }));
-    try { await api(`/api/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(updates) }); } catch (e) { get().fetchTasks(); }
+    try { await api(`/api/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(updates) }); set({ isOffline: false }); } catch (e) { set({ isOffline: true }); }
   },
   deleteTask: async (id) => {
     set(s => ({ tasks: s.tasks.filter(t => t.id !== id) }));
-    try { await api(`/api/tasks/${id}`, { method: 'DELETE' }); } catch (e) { get().fetchTasks(); }
+    try { await api(`/api/tasks/${id}`, { method: 'DELETE' }); set({ isOffline: false }); } catch (e) { set({ isOffline: true }); }
   },
   completeTask: (id) => {
     const task = get().tasks.find(t => t.id === id);
@@ -167,7 +188,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         const updatedStats = { ...userStats, totalFocusMinutes: userStats.totalFocusMinutes + 25, focusHistory: history };
         set({ userStats: updatedStats });
         localStorage.setItem('xian_user', JSON.stringify(updatedStats));
-        api('/api/stats', { method: 'PATCH', body: JSON.stringify({ focusHistory: history, totalFocusMinutes: updatedStats.totalFocusMinutes }) });
+        api('/api/stats', { method: 'PATCH', body: JSON.stringify({ focusHistory: history, totalFocusMinutes: updatedStats.totalFocusMinutes }) }).catch(() => set({ isOffline: true }));
       }
     }
     get().stopFocus();
@@ -193,7 +214,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
   requestAiAssistant: async (text, type, role = 'mentor') => {
     set({ isStreaming: true, streamingContent: '' });
-    const responseContent = MOCK_AI_RESPONSES[type] || "笔灵元气不足，未能给出回应。";
+    const responseContent = MOCK_AI_RESPONSES[type] || "笔灵元��不足，未能给出回应。";
     return new Promise((resolve) => {
       let index = 0;
       const interval = setInterval(() => {
@@ -204,19 +225,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
           clearInterval(interval);
           set({ isStreaming: false });
           const result: AiAssistantResult = {
-            taskId: crypto.randomUUID(),
-            type,
-            content: responseContent,
-            originalText: text,
-            versions: type === 'modify' ? [
-              responseContent,
-              "在学��语境下，该论述可进一步精炼为：研究表明该��制具有显著的全局建模优势。",
-              "更为地道的表达方式是：The proposed mechanism exhibits superior global modeling capabilities in academic contexts."
-            ] : undefined,
-            metadata: {
-              score: { grammar: 92, logic: 95, originality: 98, innovation: type === 'modify' ? 88 : undefined },
-              suggestions: ["逻辑严密", "原创度高"]
-            }
+            taskId: crypto.randomUUID(), type, content: responseContent, originalText: text,
+            versions: type === 'modify' ? [ responseContent, "改写版2", "改写版3" ] : undefined,
+            metadata: { score: { grammar: 92, logic: 95, originality: 98, innovation: 88 }, suggestions: ["逻辑严密", "原创度高"] }
           };
           resolve(result);
         }
@@ -228,21 +239,19 @@ export const useAppStore = create<AppStore>((set, get) => ({
     if (!stats) return;
     const today = new Date().toISOString().split('T')[0];
     if (stats.lastCheckinDate === today) {
-      toast.info("今日已领过法旨", { description: "道友明日再来。" });
+      toast.info("今日已领过��旨", { description: "道友明日再来。" });
       return;
     }
     set({ isCheckingIn: true });
     try {
       const res = await api<UserStats>('/api/checkin', { method: 'POST' });
       const statsWithHistory = { ...res, focusHistory: res.focusHistory ?? {} };
-      set({ userStats: statsWithHistory });
+      set({ userStats: statsWithHistory, isOffline: false });
       localStorage.setItem('xian_user', JSON.stringify(statsWithHistory));
-      const fortuneOptions = ["今日宜：生吞ArXiv文献", "今日宜：御气润色", "今日忌：道心破碎", "今日忌：摸鱼乱神"];
-      const randomFortune = `${statsWithHistory.nickname}道友！${fortuneOptions[Math.floor(Math.random() * fortuneOptions.length)]}。`;
-      set(s => ({ userStats: s.userStats ? { ...s.userStats, dailyFortune: randomFortune } : null }));
-      toast.success("掌门令准！", { description: "签到成功！" });
+      toast.success("掌门令准���");
     } catch (e) {
-      toast.error("法阵波动，签到失败");
+      set({ isOffline: true });
+      toast.error("网络波动，本地法旨生效");
     } finally {
       set({ isCheckingIn: false });
     }

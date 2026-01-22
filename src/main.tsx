@@ -1,7 +1,7 @@
 import '@/lib/errorReporter';
 import { enableMapSet } from "immer";
 enableMapSet();
-import { StrictMode } from 'react'
+import React, { StrictMode, Suspense, lazy } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   createBrowserRouter,
@@ -11,24 +11,30 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { LoadingScreen } from '@/components/ui/loading-screen';
 import '@/index.css'
-import { AppLayout } from '@/components/layout/AppLayout'
-import { HomePage } from '@/pages/HomePage'
-import { StatsPage } from '@/pages/StatsPage'
-import { VocabPage } from '@/pages/VocabPage'
-import { ListeningPage } from '@/pages/ListeningPage'
-import { PaperReaderPage } from '@/pages/PaperReaderPage'
-import { WriterPage } from '@/pages/WriterPage'
-import AchievementsPage from '@/pages/AchievementsPage'
-import { CheckinPage } from '@/pages/CheckinPage'
-import ResourcesPage from '@/pages/ResourcesPage'
-import CommunityPage from '@/pages/CommunityPage'
-import SettingsPage from '@/pages/SettingsPage'
+// Lazy Loading Pages
+const AppLayout = lazy(() => import('@/components/layout/AppLayout').then(m => ({ default: m.AppLayout })));
+const HomePage = lazy(() => import('@/pages/HomePage').then(m => ({ default: m.HomePage })));
+const StatsPage = lazy(() => import('@/pages/StatsPage').then(m => ({ default: m.StatsPage })));
+const VocabPage = lazy(() => import('@/pages/VocabPage').then(m => ({ default: m.VocabPage })));
+const ListeningPage = lazy(() => import('@/pages/ListeningPage').then(m => ({ default: m.ListeningPage })));
+const PaperReaderPage = lazy(() => import('@/pages/PaperReaderPage').then(m => ({ default: m.PaperReaderPage })));
+const WriterPage = lazy(() => import('@/pages/WriterPage').then(m => ({ default: m.WriterPage })));
+const AchievementsPage = lazy(() => import('@/pages/AchievementsPage'));
+const CheckinPage = lazy(() => import('@/pages/CheckinPage').then(m => ({ default: m.CheckinPage })));
+const ResourcesPage = lazy(() => import('@/pages/ResourcesPage'));
+const CommunityPage = lazy(() => import('@/pages/CommunityPage'));
+const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 const queryClient = new QueryClient();
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <AppLayout />,
+    element: (
+      <Suspense fallback={<LoadingScreen />}>
+        <AppLayout />
+      </Suspense>
+    ),
     errorElement: <RouteErrorBoundary />,
     children: [
       {
